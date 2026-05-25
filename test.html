@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>StockPulse — Test Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0a;color:#f0ede8;font-family:'DM Sans',sans-serif;padding:24px 16px 80px;max-width:760px;margin:0 auto}
+  h1{font-family:'DM Mono',monospace;color:#c8ff00;font-size:15px;letter-spacing:.08em;margin-bottom:4px}
+  .subtitle{font-size:12px;color:#6b6b6b;margin-bottom:24px;font-family:'DM Mono',monospace}
+  .btn{background:#c8ff00;color:#000;border:none;border-radius:8px;padding:10px 24px;font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;letter-spacing:.05em;transition:opacity .15s;margin-right:8px;margin-bottom:8px}
+  .btn:hover{opacity:.85} .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.secondary{background:transparent;color:#c8ff00;border:1px solid rgba(200,255,0,0.3)}
+  .btn.secondary:hover{background:rgba(200,255,0,0.08)}
+  .summary{display:flex;gap:10px;margin:20px 0;flex-wrap:wrap}
+  .sum-box{background:#141414;border-radius:8px;padding:12px 16px;min-width:80px;text-align:center;border:1px solid rgba(255,255,255,.07)}
+  .sum-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500}
+  .sum-val.pass{color:#00d084}.sum-val.warn{color:#c8ff00}.sum-val.fail{color:#ff4d4d}.sum-val.time{color:#999}
+  .sum-label{font-size:10px;color:#6b6b6b;font-family:'DM Mono',monospace;letter-spacing:.06em;margin-top:2px;text-transform:uppercase}
+  .section{margin-top:24px}
+  .section-title{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#444;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .section-title::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.06)}
+  .result-list{display:flex;flex-direction:column;gap:4px}
+  .result-row{display:flex;align-items:baseline;justify-content:space-between;padding:8px 12px;border-radius:7px;font-size:12px;background:#141414;border:1px solid rgba(255,255,255,.05)}
+  .result-row.PASS{border-color:rgba(0,208,132,.12)}
+  .result-row.WARN{border-color:rgba(200,255,0,.12)}
+  .result-row.FAIL{border-color:rgba(255,77,77,.2);background:#1a1010}
+  .result-name{color:#f0ede8;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .result-detail{font-family:'DM Mono',monospace;font-size:11px;color:#555;text-align:right;margin-left:12px;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .result-row.FAIL .result-detail{color:#ff6b6b}
+  .result-row.WARN .result-detail{color:#c8aa00}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-right:8px}
+  .PASS .status-dot{background:#00d084} .WARN .status-dot{background:#c8ff00} .FAIL .status-dot{background:#ff4d4d}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.1);border-top-color:#c8ff00;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .progress{height:3px;background:#1a1a1a;border-radius:2px;margin-bottom:16px;overflow:hidden}
+  .progress-bar{height:100%;background:#c8ff00;border-radius:2px;transition:width .3s;width:0}
+  .note{font-size:11px;color:#333;font-family:'DM Mono',monospace;margin-top:24px;line-height:1.8}
+  .badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:4px;vertical-align:middle;margin-left:6px}
+  .badge.pass{background:rgba(0,208,132,.15);color:#00d084}
+  .badge.fail{background:rgba(255,77,77,.15);color:#ff4d4d}
+  .badge.warn{background:rgba(200,255,0,.1);color:#c8ff00}
+</style>
+</head>
+<body>
+<h1>STOCKPULSE TEST SUITE</h1>
+<div class="subtitle">End-to-end validation · All stocks, crypto, APIs, sentiment, AI</div>
+
+<button class="btn" id="e2e-btn" onclick="runE2E()">▶ Run Full E2E Test</button>
+<button class="btn secondary" id="fmp-btn" onclick="runFmp()">FMP Fundamentals</button>
+<button class="btn secondary" id="ai-btn" onclick="runAi()">AI Analysis</button>
+
+<div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+
+<div id="summary-wrap" style="display:none">
+  <div class="summary">
+    <div class="sum-box"><div class="sum-val pass" id="s-pass">0</div><div class="sum-label">Pass</div></div>
+    <div class="sum-box"><div class="sum-val warn" id="s-warn">0</div><div class="sum-label">Warn</div></div>
+    <div class="sum-box"><div class="sum-val fail" id="s-fail">0</div><div class="sum-label">Fail</div></div>
+    <div class="sum-box"><div class="sum-val time" id="s-time">—</div><div class="sum-label">Seconds</div></div>
+  </div>
+</div>
+
+<div id="results-wrap"></div>
+
+<div class="note">
+  WARN on daily change >25% may be correct for volatile quantum/crypto stocks.<br>
+  FMP fundamentals require FMP_API_KEY · AI analysis requires ANTHROPIC_API_KEY<br>
+  NewsAPI requires NEWS_API_KEY — all set in Netlify environment variables.
+</div>
+
+<script>
+const groups = {
+  'Environment': r => r.name.startsWith('ENV:'),
+  'Yahoo Chart Data': r => r.name.startsWith('Chart:'),
+  'Ticker Resolution': r => r.name.startsWith('Ticker'),
+  'FMP Fundamentals': r => r.name.startsWith('FMP:'),
+  'AI Analysis': r => r.name.startsWith('AI:'),
+  'NewsAPI': r => r.name.startsWith('NewsAPI'),
+  'Sentiment Scoring': r => r.name.startsWith('Sentiment:'),
+};
+
+async function fetchAndRender(url, btnId, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>' + label;
+  document.getElementById('progress-bar').style.width = '30%';
+  document.getElementById('summary-wrap').style.display = 'none';
+  document.getElementById('results-wrap').innerHTML = '';
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    document.getElementById('progress-bar').style.width = '100%';
+    setTimeout(() => document.getElementById('progress-bar').style.width = '0', 1000);
+    renderResults(data);
+  } catch(e) {
+    document.getElementById('results-wrap').innerHTML = '<div style="color:#ff4d4d;font-family:DM Mono,monospace;font-size:13px;padding:20px">Error: ' + e.message + '</div>';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '↺ ' + label.replace('Running ','');
+}
+
+async function runE2E() { await fetchAndRender('/api/test-e2e', 'e2e-btn', 'Running E2E…'); }
+async function runFmp()  { await fetchAndRender('/api/test-fmp',  'fmp-btn', 'Testing FMP…'); }
+async function runAi()   { await fetchAndRender('/api/test-analyze', 'ai-btn', 'Testing AI…'); }
+
+function renderResults(data) {
+  // Handle simple flat response (test-fmp, test-analyze)
+  if (!data.results) {
+    document.getElementById('results-wrap').innerHTML =
+      '<pre style="font-family:DM Mono,monospace;font-size:11px;color:#888;padding:16px;background:#141414;border-radius:8px;overflow:auto">' +
+      JSON.stringify(data, null, 2) + '</pre>';
+    return;
+  }
+
+  const { summary, results } = data;
+  document.getElementById('s-pass').textContent = summary.pass;
+  document.getElementById('s-warn').textContent = summary.warn;
+  document.getElementById('s-fail').textContent = summary.fail;
+  document.getElementById('s-time').textContent = summary.elapsed;
+  document.getElementById('summary-wrap').style.display = '';
+
+  const wrap = document.getElementById('results-wrap');
+  wrap.innerHTML = '';
+
+  // Group results
+  for (const [groupName, filterFn] of Object.entries(groups)) {
+    const group = results.filter(filterFn);
+    if (group.length === 0) continue;
+
+    const gPass = group.filter(r => r.status === 'PASS').length;
+    const gFail = group.filter(r => r.status === 'FAIL').length;
+    const gWarn = group.filter(r => r.status === 'WARN').length;
+    const gBadge = gFail > 0 ? 'fail' : gWarn > 0 ? 'warn' : 'pass';
+    const gLabel = gFail > 0 ? `${gFail} fail` : gWarn > 0 ? `${gWarn} warn` : `${gPass} pass`;
+
+    const section = document.createElement('div');
+    section.className = 'section';
+    section.innerHTML = '<div class="section-title">' + groupName + '<span class="badge ' + gBadge + '">' + gLabel + '</span></div><div class="result-list" id="grp-' + groupName.replace(/\s/g,'_') + '"></div>';
+    wrap.appendChild(section);
+
+    const list = section.querySelector('.result-list');
+    group.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'result-row ' + r.status;
+      row.innerHTML = '<div class="status-dot"></div><div class="result-name">' + r.name + '</div><div class="result-detail">' + (r.detail || '') + '</div>';
+      list.appendChild(row);
+    });
+  }
+
+  // Uncategorised
+  const categorised = new Set(Object.values(groups).flatMap(f => results.filter(f).map(r => r.name)));
+  const other = results.filter(r => !categorised.has(r.name));
+  if (other.length > 0) {
+    const section = document.createElement('div');
+    section.className = 'section';
+    section.innerHTML = '<div class="section-title">Other</div><div class="result-list"></div>';
+    wrap.appendChild(section);
+    const list = section.querySelector('.result-list');
+    other.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'result-row ' + r.status;
+      row.innerHTML = '<div class="status-dot"></div><div class="result-name">' + r.name + '</div><div class="result-detail">' + (r.detail || '') + '</div>';
+      list.appendChild(row);
+    });
+  }
+}
+</script>
+</body>
+</html>
