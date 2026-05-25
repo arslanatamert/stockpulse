@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   const q = (req.query.q || '').trim();
   const cors = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
-  if (!q || q.length < 2) res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(200).send(JSON.stringify([])); return;
+  if (!q || q.length < 2) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(200).send(JSON.stringify([])); return; }
 
   try {
     const res = await fetch(
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         }
       }
     );
-    if (!res.ok) res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(200).send(JSON.stringify([])); return;
+    if (!res.ok) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(200).send(JSON.stringify([])); return; }
 
     const data = await res.json();
     const quotes = (data.quotes || [])

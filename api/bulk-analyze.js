@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   const cors = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(500).send(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' })); return;
+  if (!apiKey) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(500).send(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' })); return; }
 
   const yh = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',

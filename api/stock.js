@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   const sym = (req.query.sym || '').toUpperCase().trim();
-  if (!sym) res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(400).send(JSON.stringify({ error: 'Missing sym parameter' })); return;
+  if (!sym) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(400).json({ error: 'Missing sym parameter' }); return; }
 
   const cors = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   const yh = {
@@ -192,7 +192,7 @@ export default async function handler(req, res) {
     ]);
 
     const primary = chart1yRes.ok ? chart1yRes : chart1dRes;
-    if (!primary.ok) res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(404).send(JSON.stringify({ error: `Ticker "${sym}" not found.` })); return;
+    if (!primary.ok) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(404).send(JSON.stringify({ error: `Ticker "${sym}" not found.` })); return; }
 
     const parse = async (res) => {
       if (!res.ok) return null;
@@ -211,7 +211,7 @@ export default async function handler(req, res) {
       parse(chart3mRes), parse(chart6mRes), parse(chart1yRes), parse(chart2dRes),
     ]);
     const main = d1y || d6m || d3m || d1m || d1w || d1;
-    if (!main) res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(404).send(JSON.stringify({ error: `Keine Daten für "${sym}".` })); return;
+    if (!main) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(404).send(JSON.stringify({ error: `Keine Daten für "${sym}".` })); return; }
 
     const meta        = main.meta;
     const price       = meta.regularMarketPrice;
