@@ -178,6 +178,40 @@
   .analysis-error { padding: 12px 16px; font-size: 12px; color: var(--red); font-family: var(--mono); }
   .disclaimer { font-family: var(--mono); font-size: 9px; color: var(--muted2); margin-top: 12px; line-height: 1.5; }
 
+  /* FMV Banner */
+  .fmv-banner { background: linear-gradient(135deg, rgba(200,255,0,0.05), rgba(200,255,0,0.02)); border: 1px solid rgba(200,255,0,0.18); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .fmv-left {}
+  .fmv-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 3px; }
+  .fmv-price { font-family: var(--mono); font-size: 20px; font-weight: 500; color: var(--accent); letter-spacing: -0.01em; }
+  .fmv-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .fmv-upside { font-family: var(--mono); font-size: 12px; font-weight: 500; }
+  .fmv-upside.up { color: var(--green); }
+  .fmv-upside.dn { color: var(--red); }
+  .fmv-sub { font-family: var(--mono); font-size: 9px; color: var(--muted2); }
+  .fmv-verdict { font-family: var(--mono); font-size: 9px; font-weight: 500; padding: 3px 8px; border-radius: 5px; letter-spacing: 0.06em; white-space: nowrap; }
+  .fmv-verdict.under { background: rgba(0,208,132,0.15); color: #00d084; border: 1px solid rgba(0,208,132,0.3); }
+  .fmv-verdict.over  { background: rgba(255,77,77,0.15);  color: #ff4d4d; border: 1px solid rgba(255,77,77,0.3);  }
+  .fmv-verdict.fair  { background: rgba(200,255,0,0.10);  color: #c8ff00; border: 1px solid rgba(200,255,0,0.25); }
+
+  /* Valuation metric rows */
+  .val-rows { display: flex; flex-direction: column; }
+  .val-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .val-row:last-child { border-bottom: none; }
+  .val-left { flex: 1; min-width: 0; }
+  .val-method { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .val-context { font-family: var(--mono); font-size: 9px; color: var(--muted2); margin-top: 2px; }
+  .val-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; margin-left: 12px; }
+  .val-value { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .val-badge { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.04em; }
+  .val-badge.Undervalued { background: rgba(0,208,132,0.12); color: #00d084; border: 1px solid rgba(0,208,132,0.2); }
+  .val-badge.Fair        { background: rgba(200,255,0,0.08); color: #c8ff00; border: 1px solid rgba(200,255,0,0.18); }
+  .val-badge.Overvalued  { background: rgba(255,77,77,0.12); color: #ff4d4d; border: 1px solid rgba(255,77,77,0.2); }
+  .val-badge.NA          { background: rgba(107,107,107,0.1); color: #6b6b6b; border: 1px solid rgba(107,107,107,0.2); }
+  .val-summary { font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+  /* Section label inside tabs */
+  .section-divider { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); margin-bottom: 8px; }
+
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
     .app { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
   }
@@ -517,8 +551,23 @@ async function doSearch() {
       newsEl.innerHTML = '<div class="news-card"><div class="news-meta">No recent news found.</div></div>';
     }
 
-    // Store for analysis
-    lastStockData = { name, symbol: sym, currency, price, prevClose, high52, low52, pe: data.pe, marketCap: data.marketCap, avgVolume: data.avgVolume || data.volume, dividendYield: data.dividendYield };
+    // Store for analysis — include all valuation inputs
+    lastStockData = {
+      name, symbol: sym, currency, price, prevClose, high52, low52,
+      pe:                data.pe,
+      eps:               data.eps,
+      bookValuePerShare: data.bookValuePerShare,
+      pbRatio:           data.pbRatio,
+      psRatio:           data.psRatio,
+      evEbitda:          data.evEbitda,
+      pegRatio:          data.pegRatio,
+      roe:               data.roe,
+      marketCap:         data.marketCap,
+      avgVolume:         data.avgVolume || data.volume,
+      dividendYield:     data.dividendYield,
+      sector:            data.sector,
+      industry:          data.industry,
+    };
     lastNewsData = news || [];
     // Reset analysis panel
     document.getElementById('analysis-content').innerHTML = '';
@@ -565,34 +614,88 @@ async function doSearch() {
   }
 
   function renderAnalysis(a) {
-    const rec = a.recommendation || 'HOLD';
-    const confLabel = { Low: 'Low', Medium: 'Medium', High: 'High' }[a.confidence] || a.confidence;
+    const rec       = a.recommendation || 'HOLD';
+    const confLabel = a.confidence || 'Medium';
+
+    // ── FMV Banner ──────────────────────────────────────────────
+    let fmvHtml = '';
+    if (a.fmv) {
+      const upside = typeof a.fmvUpside === 'number' ? a.fmvUpside
+                   : typeof a.fmvUpside === 'string' ? parseFloat(a.fmvUpside) : null;
+      const upsideStr  = upside !== null ? (upside >= 0 ? '+' : '') + upside.toFixed(1) + '%' : '';
+      const upsideCls  = upside !== null ? (upside >= 0 ? 'up' : 'dn') : '';
+      const verdictKey = a.fmvVerdict === 'Undervalued' ? 'under'
+                       : a.fmvVerdict === 'Overvalued'  ? 'over' : 'fair';
+      const verdictTxt = a.fmvVerdict || '';
+      fmvHtml = `
+        <div class="fmv-banner">
+          <div class="fmv-left">
+            <div class="fmv-label">Fair Market Value</div>
+            <div class="fmv-price">${a.fmv}</div>
+          </div>
+          <div class="fmv-right">
+            ${upsideStr ? `<div class="fmv-upside ${upsideCls}">${upsideStr} vs current</div>` : ''}
+            <div class="fmv-verdict ${verdictKey}">${verdictTxt}</div>
+          </div>
+        </div>`;
+    }
+
+    // ── Valuation Metrics Rows ───────────────────────────────────
+    let valHtml = '';
+    if (a.valuationMetrics && a.valuationMetrics.length) {
+      valHtml = '<div class="val-rows">' +
+        a.valuationMetrics.map(m => {
+          const sigCls = m.signal === 'Undervalued' ? 'Undervalued'
+                       : m.signal === 'Overvalued'  ? 'Overvalued'
+                       : m.signal === 'Fair'        ? 'Fair' : 'NA';
+          const sigTxt = m.signal === 'N/A' ? 'N/A' : m.signal;
+          return `<div class="val-row">
+            <div class="val-left">
+              <div class="val-method">${m.method}</div>
+              <div class="val-context">${m.context || ''}</div>
+            </div>
+            <div class="val-right">
+              <div class="val-value">${m.value}</div>
+              <span class="val-badge ${sigCls}">${sigTxt}</span>
+            </div>
+          </div>`;
+        }).join('') +
+      '</div>';
+    }
+    if (a.valuation) {
+      valHtml += `<div class="val-summary">${a.valuation}</div>`;
+    }
+
+    // ── Risks ────────────────────────────────────────────────────
+    const riskItems = (a.risks || []).map(r => `<li>${r}</li>`).join('');
+
     const html = `
       <div class="analysis-body">
         <div class="rec-row">
-          <div class="rec-badge ${rec}">${rec === 'BUY' ? 'BUY' : rec === 'SELL' ? 'SELL' : 'HOLD'}</div>
+          <div class="rec-badge ${rec}">${rec}</div>
           <div class="rec-meta">
             <span class="rec-confidence">Confidence: ${confLabel}</span>
-            ${a.targetPrice ? '<span class="rec-target">Target Price: ' + a.targetPrice + '</span>' : ''}
           </div>
         </div>
-        <div class="rec-summary">"${a.summary}"</div>
+        <div class="rec-summary">"${a.summary || ''}"</div>
+        ${fmvHtml}
         <div class="analysis-tabs">
-          <button class="atab active" onclick="switchTab(this,'tech')">Technical</button>
-          <button class="atab" onclick="switchTab(this,'fund')">Fundamental</button>
+          <button class="atab active" onclick="switchTab(this,'val')">Valuation</button>
+          <button class="atab" onclick="switchTab(this,'fund')">Fundamentals</button>
           <button class="atab" onclick="switchTab(this,'sent')">Sentiment</button>
           <button class="atab" onclick="switchTab(this,'risk')">Risks</button>
         </div>
         <div class="atab-content">
-          <div class="atab-panel active" id="tab-tech">${a.technical || '—'}</div>
+          <div class="atab-panel active" id="tab-val">${valHtml || '—'}</div>
           <div class="atab-panel" id="tab-fund">${a.fundamental || '—'}</div>
           <div class="atab-panel" id="tab-sent">${a.sentiment || '—'}</div>
           <div class="atab-panel" id="tab-risk">
-            <ul class="risks-list">${(a.risks||[]).map(r=>'<li>'+r+'</li>').join('')}</ul>
+            <ul class="risks-list">${riskItems}</ul>
           </div>
         </div>
         <div class="disclaimer">⚠ AI-generated analysis · Not financial advice · Do your own research</div>
       </div>`;
+
     document.getElementById('analysis-content').innerHTML = html;
   }
 

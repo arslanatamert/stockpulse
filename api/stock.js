@@ -124,14 +124,20 @@ export default async function handler(req, res) {
       const m = Array.isArray(metricsArr) ? metricsArr[0] : metricsArr;
       if (!p && !m) return {};
       return {
-        marketCap:     p?.marketCap   || p?.mktCap                        || null,
-        pe:            m?.peRatioTTM  || m?.priceEarningsRatioTTM         || null,
-        eps:           m?.epsTTM      || m?.netIncomePerShareTTM          || null,
-        avgVolume:     m?.volumeAvgTTM || m?.averageInventoryTTM          || null,
-        dividendYield: p?.dividendYield || (p?.lastDiv && p?.price ? p.lastDiv / p.price : null) || null,
-        description:   p?.description || '',
-        sector:        p?.sector      || '',
-        industry:      p?.industry    || '',
+        marketCap:          p?.marketCap        || p?.mktCap                                      || null,
+        pe:                 m?.peRatioTTM        || m?.priceEarningsRatioTTM                       || null,
+        eps:                m?.netIncomePerShareTTM || m?.epsTTM                                   || null,
+        bookValuePerShare:  m?.bookValuePerShareTTM                                                || null,
+        pbRatio:            m?.pbRatioTTM                                                          || null,
+        psRatio:            m?.priceToSalesRatioTTM                                                || null,
+        evEbitda:           m?.enterpriseValueOverEBITDATTM || m?.evToEbitdaTTM                   || null,
+        pegRatio:           m?.pegRatioTTM                                                         || null,
+        roe:                m?.returnOnEquityTTM                                                   || null,
+        avgVolume:          m?.volumeAvgTTM      || m?.averageInventoryTTM                         || null,
+        dividendYield:      p?.dividendYield     || (p?.lastDiv && p?.price ? p.lastDiv / p.price : null) || null,
+        description:        p?.description       || '',
+        sector:             p?.sector            || '',
+        industry:           p?.industry          || '',
       };
     } catch { return {}; }
   }
@@ -300,12 +306,23 @@ export default async function handler(req, res) {
         dayHigh: meta.regularMarketDayHigh || null,
         dayLow:  meta.regularMarketDayLow  || null,
         volume:  meta.regularMarketVolume  || null,
-        marketCap:     fmp.marketCap     || null,
-        pe:            fmp.pe            || null,
-        avgVolume:     fmp.avgVolume     || null,
-        dividendYield: fmp.dividendYield || null,
-        description:   fmp.description  || '',
-        sector:        fmp.sector        || '',
+        // Core fundamentals
+        marketCap:         fmp.marketCap         || null,
+        pe:                fmp.pe                || null,
+        eps:               fmp.eps               || null,
+        avgVolume:         fmp.avgVolume          || null,
+        dividendYield:     fmp.dividendYield      || null,
+        // Extended valuation metrics
+        bookValuePerShare: fmp.bookValuePerShare  || null,
+        pbRatio:           fmp.pbRatio            || null,
+        psRatio:           fmp.psRatio            || null,
+        evEbitda:          fmp.evEbitda           || null,
+        pegRatio:          fmp.pegRatio           || null,
+        roe:               fmp.roe                || null,
+        // Company info
+        description:       fmp.description        || '',
+        sector:            fmp.sector             || '',
+        industry:          fmp.industry           || '',
         // Chart data for each range
         chart1d:  d1  ? d1.points  : [],
         chart1w:  d1w ? d1w.points : [],
