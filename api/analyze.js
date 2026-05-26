@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   const newsBrief = (news || []).slice(0, 3).map((n, i) => `${i+1}.${n.title}`).join(' ') || 'None';
 
   // Compact single-line schema template
-  const schema = `{"recommendation":"BUY","confidence":"High","fmv":"${cs} 0.00","fmvVerdict":"Undervalued","fmvUpside":0.0,"valuationMetrics":[{"method":"P/E vs Sector","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"PEG Ratio","value":"0.0","context":"<1=cheap","signal":"Fair"},{"method":"Graham Number","value":"${cs} 0","context":"√22.5×EPS×BVPS","signal":"Fair"},{"method":"DCF Estimate","value":"${cs} 0","context":"0%WACC 0%g","signal":"Fair"},{"method":"Price / Book","value":"0x","context":"ROE 0%","signal":"Fair"},{"method":"Price / Sales","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"EV / EBITDA","value":"0x","context":"sector 0x","signal":"Fair"}],"valuation":"2 sentences.","fundamental":"2 sentences.","sentiment":"2 sentences.","risks":["r1","r2","r3"],"summary":"1 sentence."}`;
+  const schema = `{"recommendation":"BUY","confidence":"High","fmv":"${cs} 0.00","fmvVerdict":"Undervalued","fmvUpside":0.0,"valuationMetrics":[{"method":"P/E vs Sector","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"PEG Ratio","value":"0.0","context":"<1=cheap","signal":"Fair"},{"method":"Graham Number","value":"${cs} 0","context":"√22.5×EPS×BVPS","signal":"Fair"},{"method":"DCF Estimate","value":"${cs} 0","context":"0%WACC 0%g","signal":"Fair"},{"method":"Price / Book","value":"0x","context":"ROE 0%","signal":"Fair"},{"method":"Price / Sales","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"EV / EBITDA","value":"0x","context":"sector 0x","signal":"Fair"}],"valuation":"1 sentence.","fundamental":"1 sentence.","sentiment":"1 sentence.","risks":["r1","r2","r3"],"summary":"1 sentence."}`;
 
   const prompt = [
     `Equity analyst. JSON only, no markdown. Use your knowledge to fill N/A gaps.`,
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model:      'claude-sonnet-4-6',
-        max_tokens: 550,
+        max_tokens: 750,
         messages:   [{ role: 'user', content: prompt }],
       }),
     });
