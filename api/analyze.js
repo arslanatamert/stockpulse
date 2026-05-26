@@ -38,29 +38,87 @@ export default async function handler(req, res) {
       .status(400).json({ error: 'Missing required fields: name, price' }); return;
   }
 
-  const cs  = currency || 'EUR';
-  const pct = (a, b) => b ? ((a - b) / b * 100).toFixed(1) : null;
-  const f1  = n => n != null ? Number(n).toFixed(1) : 'N/A';
-  const f2  = n => n != null ? Number(n).toFixed(2) : 'N/A';
-  const fmc = n => { if (!n) return 'N/A'; if (n >= 1e9) return (n/1e9).toFixed(1)+'B'; if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; return n; };
+  const cs = currency || 'EUR';
+  const change   = price && prevClose ? ((price - prevClose) / prevClose * 100).toFixed(2) : null;
+  const fromHigh = high52 ? ((price - high52) / high52 * 100).toFixed(1) : null;
+  const fromLow  = low52  ? ((price - low52)  / low52  * 100).toFixed(1) : null;
 
-  const chg     = pct(price, prevClose);
-  const graham  = (eps > 0 && bookValuePerShare > 0) ? Math.sqrt(22.5 * eps * bookValuePerShare).toFixed(2) : null;
+  function fmtNum(n, suf) {
+    if (!n && n !== 0) return 'N/A';
+    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B' + (suf || '');
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M' + (suf || '');
+    return n + (suf || '');
+  }
+  function f2(n) { return n != null ? Number(n).toFixed(2) : 'N/A'; }
+  function f1(n) { return n != null ? Number(n).toFixed(1) : 'N/A'; }
 
-  // 3 news titles only — descriptions cut to save tokens
-  const newsBrief = (news || []).slice(0, 3).map((n, i) => `${i+1}.${n.title}`).join(' ') || 'None';
+  // Pre-calculate Graham Number: √(22.5 × EPS × BVPS)
+  const grahamCalc = (eps > 0 && bookValuePerShare > 0)
+    ? Math.sqrt(22.5 * eps * bookValuePerShare).toFixed(2) : null;
 
-  // Compact single-line schema template
-  const schema = `{"recommendation":"BUY","confidence":"High","fmv":"${cs} 0.00","fmvVerdict":"Undervalued","fmvUpside":0.0,"valuationMetrics":[{"method":"P/E vs Sector","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"PEG Ratio","value":"0.0","context":"<1=cheap","signal":"Fair"},{"method":"Graham Number","value":"${cs} 0","context":"√22.5×EPS×BVPS","signal":"Fair"},{"method":"DCF Estimate","value":"${cs} 0","context":"0%WACC 0%g","signal":"Fair"},{"method":"Price / Book","value":"0x","context":"ROE 0%","signal":"Fair"},{"method":"Price / Sales","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"EV / EBITDA","value":"0x","context":"sector 0x","signal":"Fair"}],"valuation":"1 sentence.","fundamental":"1 sentence.","sentiment":"1 sentence.","risks":["r1","r2","r3"],"summary":"1 sentence."}`;
+  const newsText = (news || []).slice(0, 6)
+    .map((n, i) => `${i + 1}. [${n.source}] ${n.title}${n.description ? ' — ' + n.description : ''}`)
+    .join('\n') || 'No recent news available.';
+
+  const schemaExample = {
+    recommendation: 'BUY',
+    confidence: 'High',
+    fmv: `${cs} 000.00`,
+    fmvVerdict: 'Undervalued',
+    fmvUpside: 12.3,
+    valuationMetrics: [
+      { method: 'P/E vs Sector',  value: '00.0x', context: 'Sector avg: 00.0x',          signal: 'Undervalued' },
+      { method: 'PEG Ratio',      value: '0.00',  context: '< 1 = undervalued, 1-2 fair', signal: 'Fair'        },
+      { method: 'Graham Number',  value: `${cs} 000.00`, context: '√(22.5 × EPS × BVPS)',      signal: 'Fair'        },
+      { method: 'DCF Estimate',   value: `${cs} 000.00`, context: '0% WACC, 0% growth',         signal: 'Undervalued' },
+      { method: 'Price / Book',   value: '0.0x',  context: 'ROE: 00%',                   signal: 'Fair'        },
+      { method: 'Price / Sales',  value: '0.0x',  context: 'Sector avg: 0.0x',           signal: 'Undervalued' },
+      { method: 'EV / EBITDA',    value: '00.0x', context: 'Sector avg: 00.0x',          signal: 'Overvalued'  },
+    ],
+    valuation:   '2-3 sentences synthesising all 7 metrics into an overall valuation view.',
+    fundamental: '2-3 sentences on balance sheet strength, margins, and growth trajectory.',
+    sentiment:   '2-3 sentences on what the recent news implies for the near-term outlook.',
+    risks:       ['Specific risk 1', 'Specific risk 2', 'Specific risk 3'],
+    summary:     'One concise sentence recommendation explicitly weighing valuation + fundamentals + sentiment + risks.',
+  };
 
   const prompt = [
-    `Equity analyst. JSON only, no markdown. Use your knowledge to fill N/A gaps.`,
-    `${name} (${symbol}) | ${sector||'?'}/${industry||'?'} | ${cs}${price}${chg ? ` (${chg}%)` : ''}`,
-    `MCap:${fmc(marketCap)} 52w:${low52||'?'}–${high52||'?'} Div:${dividendYield ? (dividendYield*100).toFixed(1)+'%' : 'none'}`,
-    `PE:${f1(pe)} EPS:${f2(eps)} BVPS:${f2(bookValuePerShare)} Graham:${graham||'N/A'} PEG:${f2(pegRatio)} PB:${f2(pbRatio)} PS:${f2(psRatio)} EV/EBITDA:${f2(evEbitda)} ROE:${roe ? (roe*100).toFixed(1)+'%' : 'N/A'}`,
-    `News: ${newsBrief}`,
-    schema,
-    `fmvUpside=(fmv-price)/price×100. Undervalued>10%, Overvalued<-10%. signal=Undervalued|Fair|Overvalued|N/A. BUY/HOLD/SELL from valuation+fundamentals+sentiment+risks.`,
+    'You are a senior equity analyst. Deliver a rigorous multi-method valuation and investment recommendation.',
+    'Use your knowledge of this company, sector, and peers to fill in any N/A fields.',
+    '',
+    '## Market Data',
+    `Company : ${name} (${symbol})`,
+    `Sector  : ${sector || 'N/A'} | Industry: ${industry || 'N/A'}`,
+    `Price   : ${cs} ${price}${change ? ` (${change}% today)` : ''}`,
+    `52w High: ${high52 ? `${cs} ${high52} (${fromHigh}% from now)` : 'N/A'}`,
+    `52w Low : ${low52  ? `${cs} ${low52}  (${fromLow}% from now)`  : 'N/A'}`,
+    `Mkt Cap : ${fmtNum(marketCap, ' ' + cs)} | Avg Vol: ${fmtNum(avgVolume)}`,
+    `Dividend: ${dividendYield ? (dividendYield * 100).toFixed(2) + '%' : 'None'}`,
+    '',
+    '## Valuation Inputs (use these; estimate with your knowledge where N/A)',
+    `P/E (TTM)          : ${pe                ? f1(pe)              : 'N/A'}`,
+    `EPS (TTM)          : ${eps               ? `${cs} ${f2(eps)}`  : 'N/A'}`,
+    `Book Value / Share : ${bookValuePerShare  ? `${cs} ${f2(bookValuePerShare)}` : 'N/A'}`,
+    `Graham Number(calc): ${grahamCalc         ? `${cs} ${grahamCalc}` : 'N/A — compute √(22.5 × EPS × BVPS)'}`,
+    `PEG Ratio          : ${pegRatio           ? f2(pegRatio)        : 'N/A — estimate from P/E ÷ forward EPS growth%'}`,
+    `Price / Book       : ${pbRatio            ? f2(pbRatio) + 'x'  : 'N/A'}`,
+    `Price / Sales      : ${psRatio            ? f2(psRatio) + 'x'  : 'N/A'}`,
+    `EV / EBITDA        : ${evEbitda           ? f2(evEbitda) + 'x' : 'N/A'}`,
+    `Return on Equity   : ${roe                ? (roe * 100).toFixed(1) + '%' : 'N/A'}`,
+    '',
+    '## Recent News & Sentiment',
+    newsText,
+    '',
+    '## Output Rules',
+    '- Respond ONLY with the JSON object below. No markdown, no code fences, no extra text.',
+    `- fmv: weighted average of DCF, Graham Number, and sector-adjusted P/E target (format: "${cs} 000.00")`,
+    '- fmvUpside: number = (fmv - currentPrice) / currentPrice × 100  (positive = upside)',
+    '- fmvVerdict: "Undervalued" if fmvUpside > 10, "Overvalued" if fmvUpside < -10, else "Fairly Valued"',
+    '- signal for each metric must be exactly one of: "Undervalued", "Fair", "Overvalued", "N/A"',
+    '- recommendation (BUY/HOLD/SELL) must explicitly weigh all four sections: Valuation + Fundamentals + Sentiment + Risks',
+    '- All string values in English',
+    '',
+    JSON.stringify(schemaExample, null, 2),
   ].join('\n');
 
   try {
@@ -73,7 +131,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model:      'claude-sonnet-4-6',
-        max_tokens: 750,
+        max_tokens: 2048,
         messages:   [{ role: 'user', content: prompt }],
       }),
     });
