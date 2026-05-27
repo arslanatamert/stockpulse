@@ -39,6 +39,13 @@
   .search-btn:active { opacity: 0.75; }
   .search-btn svg { width: 16px; height: 16px; stroke: #000; fill: none; stroke-width: 2; stroke-linecap: round; }
 
+  /* Collapsible shortcuts */
+  .shortcuts-toggle { display: flex; align-items: center; justify-content: space-between; padding: 7px 0 7px; cursor: pointer; user-select: none; margin-bottom: 2px; }
+  .shortcuts-toggle-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .shortcuts-arrow { font-size: 10px; color: var(--muted2); transition: transform 0.2s; }
+  .shortcuts-arrow.open { transform: rotate(180deg); }
+  .shortcuts-body { overflow: hidden; transition: max-height 0.25s ease; }
+
   /* Category groups */
   .group-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); margin-bottom: 6px; margin-top: 14px; }
   .group-label:first-of-type { margin-top: 0; }
@@ -233,41 +240,47 @@
     <div class="search-dropdown" id="search-dropdown"></div>
   </div>
 
-  <div class="group-label">🇪🇺 European Stocks</div>
-  <div class="quick">
-    <button class="qbtn de" onclick="quick('AIR.DE')" title="Airbus">Airbus</button>
-    <button class="qbtn de" onclick="quick('DTE.DE')" title="Deutsche Telekom">Telekom</button>
-    <button class="qbtn de" onclick="quick('ALV.DE')" title="Allianz">Allianz</button>
-    <button class="qbtn de" onclick="quick('RACE.MI')" title="Ferrari (Milan)">Ferrari</button>
+  <div class="shortcuts-toggle" onclick="toggleShortcuts()">
+    <span class="shortcuts-toggle-label">Quick Access</span>
+    <span class="shortcuts-arrow" id="shortcuts-arrow">▾</span>
   </div>
+  <div class="shortcuts-body" id="shortcuts-body" style="max-height:0;">
+    <div class="group-label">🇪🇺 European Stocks</div>
+    <div class="quick">
+      <button class="qbtn de" onclick="quick('AIR.DE')" title="Airbus">Airbus</button>
+      <button class="qbtn de" onclick="quick('DTE.DE')" title="Deutsche Telekom">Telekom</button>
+      <button class="qbtn de" onclick="quick('ALV.DE')" title="Allianz">Allianz</button>
+      <button class="qbtn de" onclick="quick('RACE.MI')" title="Ferrari (Milan)">Ferrari</button>
+    </div>
 
-  <div class="group-label">🎮 Gaming</div>
-  <div class="quick">
-    <button class="qbtn" onclick="quick('NTO.F')" title="Nintendo Frankfurt">Nintendo</button>
-  </div>
+    <div class="group-label">🎮 Gaming</div>
+    <div class="quick">
+      <button class="qbtn" onclick="quick('NTO.F')" title="Nintendo Frankfurt">Nintendo</button>
+    </div>
 
-  <div class="group-label">🚀 Space</div>
-  <div class="quick">
-    <button class="qbtn space" onclick="quick('RKLB')" title="Rocket Lab → 6RJ0.F (EUR)">Rocket Lab</button>
-    <button class="qbtn space" onclick="quick('ASTS')" title="AST SpaceMobile → 3ZU0.F (EUR)">AST SpaceMobile</button>
-  </div>
+    <div class="group-label">🚀 Space</div>
+    <div class="quick">
+      <button class="qbtn space" onclick="quick('RKLB')" title="Rocket Lab → 6RJ0.F (EUR)">Rocket Lab</button>
+      <button class="qbtn space" onclick="quick('ASTS')" title="AST SpaceMobile → 3ZU0.F (EUR)">AST SpaceMobile</button>
+    </div>
 
-  <div class="group-label">⚛️ Quantum Computing</div>
-  <div class="quick">
-    <button class="qbtn quantum" onclick="quick('IONQ')" title="IonQ → 0YB0.F (EUR)">IonQ</button>
-    <button class="qbtn quantum" onclick="quick('RGTI')" title="Rigetti → A00.F (EUR)">Rigetti</button>
-    <button class="qbtn quantum" onclick="quick('RQ0.F')" title="D-Wave (Frankfurt, EUR)">D-Wave</button>
-    <button class="qbtn quantum" onclick="quick('QUBT')" title="Quantum Computing Inc (NASDAQ, USD)">QUBT $</button>
-  </div>
+    <div class="group-label">⚛️ Quantum Computing</div>
+    <div class="quick">
+      <button class="qbtn quantum" onclick="quick('IONQ')" title="IonQ → 0YB0.F (EUR)">IonQ</button>
+      <button class="qbtn quantum" onclick="quick('RGTI')" title="Rigetti → A00.F (EUR)">Rigetti</button>
+      <button class="qbtn quantum" onclick="quick('RQ0.F')" title="D-Wave (Frankfurt, EUR)">D-Wave</button>
+      <button class="qbtn quantum" onclick="quick('QUBT')" title="Quantum Computing Inc (NASDAQ, USD)">QUBT $</button>
+    </div>
 
-  <div class="group-label">₿ Crypto</div>
-  <div class="quick">
-    <button class="qbtn crypto" onclick="quick('BTC-EUR')" title="Bitcoin EUR">BTC</button>
-    <button class="qbtn crypto" onclick="quick('ETH-EUR')" title="Ethereum EUR">ETH</button>
-    <button class="qbtn crypto" onclick="quick('SOL-EUR')" title="Solana EUR">SOL</button>
-    <button class="qbtn crypto" onclick="quick('ADA-EUR')" title="Cardano EUR">ADA</button>
-    <button class="qbtn crypto" onclick="quick('TRX-EUR')" title="TRON EUR">TRX</button>
-    <button class="qbtn crypto" onclick="quick('MATIC-EUR')" title="Polygon EUR">POL</button>
+    <div class="group-label">₿ Crypto</div>
+    <div class="quick">
+      <button class="qbtn crypto" onclick="quick('BTC-EUR')" title="Bitcoin EUR">BTC</button>
+      <button class="qbtn crypto" onclick="quick('ETH-EUR')" title="Ethereum EUR">ETH</button>
+      <button class="qbtn crypto" onclick="quick('SOL-EUR')" title="Solana EUR">SOL</button>
+      <button class="qbtn crypto" onclick="quick('ADA-EUR')" title="Cardano EUR">ADA</button>
+      <button class="qbtn crypto" onclick="quick('TRX-EUR')" title="TRON EUR">TRX</button>
+      <button class="qbtn crypto" onclick="quick('MATIC-EUR')" title="Polygon EUR">POL</button>
+    </div>
   </div>
 
   <div id="error-box" class="error-box" style="display:none;"></div>
@@ -302,13 +315,6 @@
       </div>
     </div>
     <div id="profile-box" class="profile" style="display:none;"></div>
-    <div class="analysis-wrap" id="analysis-wrap">
-      <div class="analysis-header">
-        <span class="analysis-title">⚡ AI Analysis</span>
-        <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()">Analyse</button>
-      </div>
-      <div id="analysis-content"></div>
-    </div>
     <div class="chart-wrap" id="chart-wrap" style="display:none;">
       <div class="chart-header">
         <span class="chart-label" id="chart-title">Price Chart</span>
@@ -332,7 +338,15 @@
       <div class="chart-legend">
         <div class="legend-item"><div class="legend-dot" style="background:#00d084"></div>Price Chart</div>
         <div class="legend-item"><div class="legend-dot" style="background:rgba(255,200,0,0.7)"></div><span id="legend-ma1">MA20</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(100,160,255,0.7)"></div><span id="legend-ma2">MA50</span></div>      </div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(100,160,255,0.7)"></div><span id="legend-ma2">MA50</span></div>
+      </div>
+    </div>
+    <div class="analysis-wrap" id="analysis-wrap">
+      <div class="analysis-header">
+        <span class="analysis-title">⚡ AI Analysis</span>
+        <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()">Analyse</button>
+      </div>
+      <div id="analysis-content"></div>
     </div>
     <div class="section-title">Latest News</div>
     <div id="news-list" class="news-list"></div>
@@ -442,6 +456,21 @@ function selectSymbol(sym) {
 }
 
 function quick(sym) { $('ticker-input').value = sym; doSearch(); }
+
+// Collapsible shortcuts
+let shortcutsOpen = false;
+function toggleShortcuts() {
+  shortcutsOpen = !shortcutsOpen;
+  const body  = $('shortcuts-body');
+  const arrow = $('shortcuts-arrow');
+  if (shortcutsOpen) {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    arrow.classList.add('open');
+  } else {
+    body.style.maxHeight = '0';
+    arrow.classList.remove('open');
+  }
+}
 
 function fmt(n) {
   if (!n && n !== 0) return '—';
