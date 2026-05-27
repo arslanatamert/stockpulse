@@ -107,7 +107,10 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model:      'claude-sonnet-4-6',
         max_tokens: 800,
-        messages:   [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'user',      content: prompt },
+          { role: 'assistant', content: '{'    },  // prefill — forces JSON-only, no preamble possible
+        ],
       }),
     });
 
@@ -118,21 +121,22 @@ export default async function handler(req, res) {
     }
 
     const data = await apiRes.json();
-    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    // Prefill means the API returns everything AFTER the '{' — prepend it back
+    const raw  = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    const text = '{' + raw;
 
-    // Strip accidental markdown fences
-    const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-    const start = clean.indexOf('{');
+    // Strip accidental trailing markdown fences (prefill prevents leading ones)
+    const clean = text.replace(/\s*```\s*$/i, '').trim();
     const end   = clean.lastIndexOf('}');
 
-    if (start === -1 || end === -1) {
+    if (end === -1) {
       res.setHeader('Access-Control-Allow-Origin', '*').setHeader('Content-Type', 'application/json')
         .status(500).json({ error: 'No JSON in response. Got: ' + clean.slice(0, 200) }); return;
     }
 
     let analysis;
     try {
-      analysis = JSON.parse(clean.slice(start, end + 1));
+      analysis = JSON.parse(clean.slice(0, end + 1));
     } catch (parseErr) {
       res.setHeader('Access-Control-Allow-Origin', '*').setHeader('Content-Type', 'application/json')
         .status(500).json({ error: `JSON parse failed: ${parseErr.message} | Raw: ${clean.slice(0, 200)}` }); return;
