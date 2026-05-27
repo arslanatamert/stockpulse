@@ -755,46 +755,41 @@ async function doSearch() {
       <path d="${fillPath}" fill="${fillColor}" stroke="none"/>
       <path d="${linePath}" fill="none" stroke="${lineColor}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
 
-    // MA20 and MA50 overlays — calculated from the visible points
-    function calcMA(data, period) {
-      return data.map((_, i) => {
-        if (i < period - 1) return null;
-        const slice = data.slice(i - period + 1, i + 1);
-        return slice.reduce((s, p) => s + p.v, 0) / period;
-      });
-    }
-
-    // MA periods adapt to the selected time range
-    // 1D: MA9/MA21 (intraday minutes), 1W: MA9/MA21, 1M: MA7/MA20, 3M/6M: MA20/MA50, 1Y: MA20/MA50
-    const maPeriods = {
-      '1d': [9, 21], '1w': [9, 21], '1m': [7, 20], '3m': [20, 50], '6m': [20, 50], '1y': [20, 50]
-    };
-    const [ma1period, ma2period] = maPeriods[currentRange] || [20, 50];
-
-    // Update legend labels
+    // MA20/MA50 overlays — only on the 1Y view
     const lma1 = document.getElementById('legend-ma1');
     const lma2 = document.getElementById('legend-ma2');
-    if (lma1) lma1.textContent = 'MA' + ma1period;
-    if (lma2) lma2.textContent = 'MA' + ma2period;
+    const maLegend1 = lma1 && lma1.closest('.legend-item');
+    const maLegend2 = lma2 && lma2.closest('.legend-item');
 
-    const ma20vals = calcMA(pts, ma1period);
-    const ma50vals = calcMA(pts, ma2period);
-
-    function maPath(maVals) {
-      let d = '';
-      maVals.forEach((v, i) => {
-        if (v === null) return;
-        const x = toX(i), y = toY(v);
-        d += (d === '' ? 'M' : 'L') + x + ',' + y;
-      });
-      return d;
+    if (currentRange === '1y') {
+      function calcMA(data, period) {
+        return data.map((_, i) => {
+          if (i < period - 1) return null;
+          const slice = data.slice(i - period + 1, i + 1);
+          return slice.reduce((s, p) => s + p.v, 0) / period;
+        });
+      }
+      function maPath(maVals) {
+        let d = '';
+        maVals.forEach((v, i) => {
+          if (v === null) return;
+          const x = toX(i), y = toY(v);
+          d += (d === '' ? 'M' : 'L') + x + ',' + y;
+        });
+        return d;
+      }
+      const ma20path = maPath(calcMA(pts, 20));
+      const ma50path = maPath(calcMA(pts, 50));
+      if (ma20path) svgContent += `<path d="${ma20path}" fill="none" stroke="rgba(255,200,0,0.7)" stroke-width="1" stroke-linejoin="round"/>`;
+      if (ma50path) svgContent += `<path d="${ma50path}" fill="none" stroke="rgba(100,160,255,0.7)" stroke-width="1" stroke-linejoin="round"/>`;
+      if (lma1) lma1.textContent = 'MA20';
+      if (lma2) lma2.textContent = 'MA50';
+      if (maLegend1) maLegend1.style.display = '';
+      if (maLegend2) maLegend2.style.display = '';
+    } else {
+      if (maLegend1) maLegend1.style.display = 'none';
+      if (maLegend2) maLegend2.style.display = 'none';
     }
-
-    const ma20path = maPath(ma20vals);
-    const ma50path = maPath(ma50vals);
-
-    if (ma20path) svgContent += `<path d="${ma20path}" fill="none" stroke="rgba(255,200,0,0.7)" stroke-width="1" stroke-linejoin="round"/>`;
-    if (ma50path) svgContent += `<path d="${ma50path}" fill="none" stroke="rgba(100,160,255,0.7)" stroke-width="1" stroke-linejoin="round"/>`;
 
     // Crosshair line (hidden initially, shown on hover)
     svgContent += `<line id="crosshair" x1="0" y1="${padY}" x2="0" y2="${H - padY}" stroke="rgba(255,255,255,0.2)" stroke-width="1" display="none"/>`;
