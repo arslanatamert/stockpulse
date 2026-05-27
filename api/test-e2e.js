@@ -156,53 +156,108 @@ export default async function handler(req, res) {
     warn('FMP: fundamentals', 'FMP_API_KEY not set — skipped');
   }
 
-  // ── 6. AI ANALYSIS ──────────────────────────────────────────────────────────
+  // ── 6. AI ANALYSIS — full end-to-end with real Telekom payload ─────────────
   if (hasAnthropicKey) {
+    // 6a. Quick connectivity ping (cheap — no real prompt)
     try {
-      const testPayload = {
-        name: 'Airbus SE', symbol: 'AIR.DE', currency: 'EUR',
-        price: 169.66, prevClose: 167.64, high52: 221.25, low52: 154.10,
-        news: [{ source: 'Reuters', title: 'Airbus raises 2026 targets', description: 'Strong order book drives upgrade.' }]
-      };
+      const pingRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 20, messages: [{ role: 'user', content: 'Reply with exactly: {"ok":true}' }] })
+      });
+      if (!pingRes.ok) throw new Error(`HTTP ${pingRes.status}: ${await pingRes.text()}`);
+      const pd = await pingRes.json();
+      const pt = pd.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+      JSON.parse(pt.trim());
+      pass('AI: Anthropic connectivity', `claude-sonnet-4-6 reachable`);
+    } catch(e) { fail('AI: Anthropic connectivity', e.message); }
+
+    // 6b. Full valuation schema test with realistic Telekom data
+    try {
+      // Mirror the exact prompt logic from analyze.js
+      const cs = 'EUR';
+      const price = 28.50, prevClose = 28.20, high52 = 30.10, low52 = 20.15;
+      const pe = 14.2, eps = 2.01, bvps = 16.50, pbRatio = 1.73, psRatio = 0.92;
+      const evEbitda = 6.8, pegRatio = 1.1, roe = 0.122;
+      const graham = Math.sqrt(22.5 * eps * bvps).toFixed(2);
+      const schema = `{"recommendation":"BUY","confidence":"High","fmv":"${cs} 0.00","fmvVerdict":"Undervalued","fmvUpside":0.0,"valuationMetrics":[{"method":"P/E vs Sector","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"PEG Ratio","value":"0.0","context":"<1=cheap","signal":"Fair"},{"method":"Graham Number","value":"${cs} 0","context":"√22.5×EPS×BVPS","signal":"Fair"},{"method":"DCF Estimate","value":"${cs} 0","context":"0%WACC 0%g","signal":"Fair"},{"method":"Price / Book","value":"0x","context":"ROE 0%","signal":"Fair"},{"method":"Price / Sales","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"EV / EBITDA","value":"0x","context":"sector 0x","signal":"Fair"}],"valuation":"1 sentence.","fundamental":"1 sentence.","sentiment":"1 sentence.","risks":["r1","r2","r3"],"summary":"1 sentence."}`;
+
+      const prompt = [
+        'You are a senior equity analyst. Deliver a rigorous multi-method valuation and investment recommendation.',
+        'Use your knowledge of this company, sector, and peers to fill in any N/A fields.',
+        '', '## Market Data',
+        `Company : Deutsche Telekom AG (DTE.DE)`,
+        `Sector  : Communication Services | Industry: Telecom Services`,
+        `Price   : ${cs} ${price} (${((price-prevClose)/prevClose*100).toFixed(2)}% today)`,
+        `52w High: ${cs} ${high52} (${((price-high52)/high52*100).toFixed(1)}% from now)`,
+        `52w Low : ${cs} ${low52} (+${((price-low52)/low52*100).toFixed(1)}% from now)`,
+        `Mkt Cap : 132.0B ${cs} | Avg Vol: 12.0M`,
+        `Dividend: 3.60%`,
+        '', '## Valuation Inputs (estimate with your knowledge where N/A)',
+        `P/E: ${pe} | EPS: ${cs} ${eps} | BVPS: ${cs} ${bvps} | Graham: ${cs} ${graham}`,
+        `PEG: ${pegRatio} | P/B: ${pbRatio}x | P/S: ${psRatio}x | EV/EBITDA: ${evEbitda}x | ROE: ${(roe*100).toFixed(1)}%`,
+        '', '## Recent News',
+        '1. [Reuters] Deutsche Telekom raises 2025 guidance on T-Mobile US strength',
+        '2. [Bloomberg] Telekom fiber rollout accelerates across Germany',
+        '3. [Yahoo Finance] DTE dividend confirmed, yield remains above 3.5%',
+        '', '## Output — respond ONLY with the JSON below, no markdown, no code fences:',
+        `- fmv: weighted avg of DCF + Graham + sector P/E target, formatted as "${cs} 0.00"`,
+        '- fmvUpside: (fmv − price) / price × 100',
+        '- fmvVerdict: "Undervalued" >10%, "Overvalued" <−10%, else "Fairly Valued"',
+        '- signal: exactly "Undervalued", "Fair", "Overvalued", or "N/A"',
+        '- valuation / fundamental / sentiment: MAX 1 concise sentence each',
+        '- recommendation (BUY/HOLD/SELL) derived from all 4 sections combined',
+        '', schema,
+      ].join('\n');
+
+      const t1 = Date.now();
       const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 400,
-          messages: [{ role: 'user', content: 'Reply with exactly this JSON and nothing else: {"recommendation":"BUY","confidence":"High","summary":"Test passed"}' }]
-        })
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 700, messages: [{ role: 'user', content: prompt }] })
       });
-      if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}: ${await aiRes.text()}`);
+      if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}: ${(await aiRes.text()).slice(0,200)}`);
       const aiData = await aiRes.json();
-      const text = aiData.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
-      const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
-      parsed.recommendation === 'BUY'
-        ? pass('AI: Anthropic API connection', `model: claude-sonnet-4-6 | rec: ${parsed.recommendation}`)
-        : warn('AI: Anthropic API connection', `unexpected response: ${text.slice(0,100)}`);
-    } catch(e) { fail('AI: Anthropic API connection', e.message); }
+      const elapsed = Date.now() - t1;
 
-    // Test full analysis prompt structure
-    try {
-      const promptLines = [
-        'You are a senior equity analyst.',
-        'Company: Test Corp (TEST)',
-        'Price: EUR 100',
-        'Respond ONLY with JSON: {"recommendation":"BUY","confidence":"High","targetPrice":"EUR 120","technical":"ok","fundamental":"ok","sentiment":"ok","risks":["r1","r2","r3"],"summary":"test"}',
-      ].join('\n');
-      const res2 = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 300, messages: [{ role: 'user', content: promptLines }] })
-      });
-      const d2 = await res2.json();
-      const t2 = d2.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
-      const p2 = JSON.parse(t2.replace(/```json|```/g,'').trim().slice(t2.indexOf('{'), t2.lastIndexOf('}')+1));
-      const hasAllFields = ['recommendation','confidence','targetPrice','technical','fundamental','sentiment','risks','summary'].every(f => f in p2);
-      hasAllFields
-        ? pass('AI: Analysis response structure', `all 8 fields present: ${Object.keys(p2).join(', ')}`)
-        : fail('AI: Analysis response structure', `missing fields. Got: ${Object.keys(p2).join(', ')}`);
-    } catch(e) { fail('AI: Analysis response structure', e.message); }
+      const rawText = aiData.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+      const clean = rawText.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/i,'').trim();
+      const parsed = JSON.parse(clean.slice(clean.indexOf('{'), clean.lastIndexOf('}')+1));
+
+      // Token usage + cost
+      const inTok  = aiData.usage?.input_tokens  || 0;
+      const outTok = aiData.usage?.output_tokens || 0;
+      const costCents = ((inTok * 3 + outTok * 15) / 1_000_000 * 100).toFixed(2);
+
+      // Validate schema
+      const requiredTop = ['recommendation','confidence','fmv','fmvVerdict','fmvUpside','valuationMetrics','valuation','fundamental','sentiment','risks','summary'];
+      const missingTop  = requiredTop.filter(f => !(f in parsed));
+      const metrics     = Array.isArray(parsed.valuationMetrics) ? parsed.valuationMetrics : [];
+      const metricFields = ['method','value','context','signal'];
+      const badMetrics  = metrics.filter(m => metricFields.some(f => !(f in m)));
+
+      if (missingTop.length > 0) {
+        fail('AI: Valuation schema — top-level fields', `missing: ${missingTop.join(', ')}`);
+      } else if (metrics.length !== 7) {
+        fail('AI: Valuation schema — metrics count', `expected 7, got ${metrics.length} | truncation likely`);
+      } else if (badMetrics.length > 0) {
+        fail('AI: Valuation schema — metric structure', `${badMetrics.length} metric(s) missing fields`);
+      } else {
+        pass('AI: Valuation schema — full structure', [
+          `rec:${parsed.recommendation} conf:${parsed.confidence}`,
+          `fmv:${parsed.fmv} verdict:${parsed.fmvVerdict} upside:${parsed.fmvUpside}%`,
+          `metrics:${metrics.length}/7 ✓`,
+          `tokens in:${inTok} out:${outTok} → ~${costCents}¢`,
+          `${elapsed}ms`,
+        ].join(' | '));
+      }
+
+      // Warn if cost is drifting over 1.5¢
+      const costNum = parseFloat(costCents);
+      if (costNum > 1.5) warn('AI: Cost check', `${costCents}¢ — over 1.5¢ target (in:${inTok} out:${outTok})`);
+      else pass('AI: Cost check', `${costCents}¢ per call (in:${inTok} out:${outTok})`);
+
+    } catch(e) { fail('AI: Valuation schema test', e.message); }
   } else {
     fail('AI: Anthropic API', 'ANTHROPIC_API_KEY not set');
   }

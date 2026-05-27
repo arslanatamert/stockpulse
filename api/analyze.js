@@ -56,31 +56,13 @@ export default async function handler(req, res) {
   const grahamCalc = (eps > 0 && bookValuePerShare > 0)
     ? Math.sqrt(22.5 * eps * bookValuePerShare).toFixed(2) : null;
 
+  // Titles only — dropping descriptions saves ~200 input tokens
   const newsText = (news || []).slice(0, 6)
-    .map((n, i) => `${i + 1}. [${n.source}] ${n.title}${n.description ? ' — ' + n.description : ''}`)
-    .join('\n') || 'No recent news available.';
+    .map((n, i) => `${i + 1}. [${n.source}] ${n.title}`)
+    .join('\n') || 'No recent news.';
 
-  const schemaExample = {
-    recommendation: 'BUY',
-    confidence: 'High',
-    fmv: `${cs} 000.00`,
-    fmvVerdict: 'Undervalued',
-    fmvUpside: 12.3,
-    valuationMetrics: [
-      { method: 'P/E vs Sector',  value: '00.0x', context: 'Sector avg: 00.0x',          signal: 'Undervalued' },
-      { method: 'PEG Ratio',      value: '0.00',  context: '< 1 = undervalued, 1-2 fair', signal: 'Fair'        },
-      { method: 'Graham Number',  value: `${cs} 000.00`, context: '√(22.5 × EPS × BVPS)',      signal: 'Fair'        },
-      { method: 'DCF Estimate',   value: `${cs} 000.00`, context: '0% WACC, 0% growth',         signal: 'Undervalued' },
-      { method: 'Price / Book',   value: '0.0x',  context: 'ROE: 00%',                   signal: 'Fair'        },
-      { method: 'Price / Sales',  value: '0.0x',  context: 'Sector avg: 0.0x',           signal: 'Undervalued' },
-      { method: 'EV / EBITDA',    value: '00.0x', context: 'Sector avg: 00.0x',          signal: 'Overvalued'  },
-    ],
-    valuation:   '2-3 sentences synthesising all 7 metrics into an overall valuation view.',
-    fundamental: '2-3 sentences on balance sheet strength, margins, and growth trajectory.',
-    sentiment:   '2-3 sentences on what the recent news implies for the near-term outlook.',
-    risks:       ['Specific risk 1', 'Specific risk 2', 'Specific risk 3'],
-    summary:     'One concise sentence recommendation explicitly weighing valuation + fundamentals + sentiment + risks.',
-  };
+  // Compact single-line schema — saves ~270 tokens vs pretty-printed
+  const schema = `{"recommendation":"BUY","confidence":"High","fmv":"${cs} 0.00","fmvVerdict":"Undervalued","fmvUpside":0.0,"valuationMetrics":[{"method":"P/E vs Sector","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"PEG Ratio","value":"0.0","context":"<1=cheap","signal":"Fair"},{"method":"Graham Number","value":"${cs} 0","context":"√22.5×EPS×BVPS","signal":"Fair"},{"method":"DCF Estimate","value":"${cs} 0","context":"0%WACC 0%g","signal":"Fair"},{"method":"Price / Book","value":"0x","context":"ROE 0%","signal":"Fair"},{"method":"Price / Sales","value":"0x","context":"sector 0x","signal":"Fair"},{"method":"EV / EBITDA","value":"0x","context":"sector 0x","signal":"Fair"}],"valuation":"1 sentence.","fundamental":"1 sentence.","sentiment":"1 sentence.","risks":["r1","r2","r3"],"summary":"1 sentence."}`;
 
   const prompt = [
     'You are a senior equity analyst. Deliver a rigorous multi-method valuation and investment recommendation.',
@@ -95,30 +77,22 @@ export default async function handler(req, res) {
     `Mkt Cap : ${fmtNum(marketCap, ' ' + cs)} | Avg Vol: ${fmtNum(avgVolume)}`,
     `Dividend: ${dividendYield ? (dividendYield * 100).toFixed(2) + '%' : 'None'}`,
     '',
-    '## Valuation Inputs (use these; estimate with your knowledge where N/A)',
-    `P/E (TTM)          : ${pe                ? f1(pe)              : 'N/A'}`,
-    `EPS (TTM)          : ${eps               ? `${cs} ${f2(eps)}`  : 'N/A'}`,
-    `Book Value / Share : ${bookValuePerShare  ? `${cs} ${f2(bookValuePerShare)}` : 'N/A'}`,
-    `Graham Number(calc): ${grahamCalc         ? `${cs} ${grahamCalc}` : 'N/A — compute √(22.5 × EPS × BVPS)'}`,
-    `PEG Ratio          : ${pegRatio           ? f2(pegRatio)        : 'N/A — estimate from P/E ÷ forward EPS growth%'}`,
-    `Price / Book       : ${pbRatio            ? f2(pbRatio) + 'x'  : 'N/A'}`,
-    `Price / Sales      : ${psRatio            ? f2(psRatio) + 'x'  : 'N/A'}`,
-    `EV / EBITDA        : ${evEbitda           ? f2(evEbitda) + 'x' : 'N/A'}`,
-    `Return on Equity   : ${roe                ? (roe * 100).toFixed(1) + '%' : 'N/A'}`,
+    '## Valuation Inputs (estimate with your knowledge where N/A)',
+    `P/E: ${pe ? f1(pe) : 'N/A'} | EPS: ${eps ? `${cs} ${f2(eps)}` : 'N/A'} | BVPS: ${bookValuePerShare ? `${cs} ${f2(bookValuePerShare)}` : 'N/A'} | Graham: ${grahamCalc ? `${cs} ${grahamCalc}` : 'compute √(22.5×EPS×BVPS)'}`,
+    `PEG: ${pegRatio ? f2(pegRatio) : 'estimate'} | P/B: ${pbRatio ? f2(pbRatio)+'x' : 'N/A'} | P/S: ${psRatio ? f2(psRatio)+'x' : 'N/A'} | EV/EBITDA: ${evEbitda ? f2(evEbitda)+'x' : 'N/A'} | ROE: ${roe ? (roe*100).toFixed(1)+'%' : 'N/A'}`,
     '',
-    '## Recent News & Sentiment',
+    '## Recent News',
     newsText,
     '',
-    '## Output Rules',
-    '- Respond ONLY with the JSON object below. No markdown, no code fences, no extra text.',
-    `- fmv: weighted average of DCF, Graham Number, and sector-adjusted P/E target (format: "${cs} 000.00")`,
-    '- fmvUpside: number = (fmv - currentPrice) / currentPrice × 100  (positive = upside)',
-    '- fmvVerdict: "Undervalued" if fmvUpside > 10, "Overvalued" if fmvUpside < -10, else "Fairly Valued"',
-    '- signal for each metric must be exactly one of: "Undervalued", "Fair", "Overvalued", "N/A"',
-    '- recommendation (BUY/HOLD/SELL) must explicitly weigh all four sections: Valuation + Fundamentals + Sentiment + Risks',
-    '- All string values in English',
+    '## Output — respond ONLY with the JSON below, no markdown, no code fences:',
+    `- fmv: weighted avg of DCF + Graham + sector P/E target, formatted as "${cs} 0.00"`,
+    '- fmvUpside: (fmv − price) / price × 100',
+    '- fmvVerdict: "Undervalued" >10%, "Overvalued" <−10%, else "Fairly Valued"',
+    '- signal: exactly "Undervalued", "Fair", "Overvalued", or "N/A"',
+    '- valuation / fundamental / sentiment: MAX 1 concise sentence each',
+    '- recommendation (BUY/HOLD/SELL) derived from all 4 sections combined',
     '',
-    JSON.stringify(schemaExample, null, 2),
+    schema,
   ].join('\n');
 
   try {
@@ -131,7 +105,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model:      'claude-sonnet-4-6',
-        max_tokens: 2048,
+        max_tokens: 700,
         messages:   [{ role: 'user', content: prompt }],
       }),
     });
