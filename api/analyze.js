@@ -30,8 +30,9 @@ export default async function handler(req, res) {
     name, symbol, currency, price, prevClose, high52, low52,
     pe, marketCap, avgVolume, dividendYield,
     eps, bookValuePerShare, pbRatio, psRatio, evEbitda, pegRatio, roe,
-    sector, industry, news,
+    sector, industry, news, lang,
   } = body;
+  const isTR = lang === 'tr';
 
   if (!name || !price) {
     res.setHeader('Access-Control-Allow-Origin', '*').setHeader('Content-Type', 'application/json')
@@ -91,6 +92,7 @@ export default async function handler(req, res) {
     '- signal: exactly "Undervalued", "Fair", "Overvalued", or "N/A"',
     '- valuation / fundamental / sentiment: MAX 1 concise sentence each',
     '- recommendation (BUY/HOLD/SELL) derived from all 4 sections combined',
+    isTR ? '- LANGUAGE: write valuation, fundamental, sentiment, risks, summary, confidence, and all valuationMetrics method/context fields in Turkish. Keep recommendation (BUY/HOLD/SELL), fmvVerdict (Undervalued/Overvalued/Fairly Valued), and signal (Undervalued/Fair/Overvalued) in English.' : '- Write all text fields in English.',
     '- IMPORTANT: output must be a single line of JSON with no whitespace between tokens',
     '',
     schema,
@@ -107,7 +109,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model:      'claude-sonnet-4-6',
         max_tokens: 1024,
-        system:     'You are a JSON-only financial analysis API. Output a single compact JSON object with no whitespace. Never write any text, reasoning, explanation, or markdown before or after the JSON. Your entire response must be one line starting with { and ending with }.',
+        system:     `You are a JSON-only financial analysis API. Output a single compact JSON object with no whitespace. Never write any text, reasoning, explanation, or markdown before or after the JSON. Your entire response must be one line starting with { and ending with }.${isTR ? ' Write all narrative text fields in Turkish.' : ''}`,
         messages:   [{ role: 'user', content: prompt }],
       }),
     });

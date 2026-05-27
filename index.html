@@ -694,7 +694,7 @@ async function doSearch() {
     content.innerHTML = `<div class="analysis-loading"><div class="spinner"></div><p>${t('ai-loading')}</p></div>`;
 
     try {
-      const payload = { ...lastStockData, news: lastNewsData || [] };
+      const payload = { ...lastStockData, news: lastNewsData || [], lang: currentLang };
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
