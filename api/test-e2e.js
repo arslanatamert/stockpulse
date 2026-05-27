@@ -216,21 +216,18 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 800,
-          messages: [
-            { role: 'user',      content: prompt },
-            { role: 'assistant', content: '{'    },  // prefill — no preamble possible
-          ],
+          model: 'claude-sonnet-4-6', max_tokens: 1024,
+          system: 'You are a JSON-only financial analysis API. Output a single compact JSON object with no whitespace. Never write any text, reasoning, explanation, or markdown before or after the JSON. Your entire response must be one line starting with { and ending with }.',
+          messages: [{ role: 'user', content: prompt }],
         })
       });
       if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}: ${(await aiRes.text()).slice(0,200)}`);
       const aiData = await aiRes.json();
       const elapsed = Date.now() - t1;
 
-      // Prefill means response is everything after '{' — prepend it back
-      const rawText = '{' + (aiData.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '');
-      const clean = rawText.replace(/\s*```\s*$/i,'').trim();
-      const parsed = JSON.parse(clean.slice(0, clean.lastIndexOf('}')+1));
+      const rawText = aiData.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
+      const clean = rawText.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/i,'').trim();
+      const parsed = JSON.parse(clean.slice(clean.indexOf('{'), clean.lastIndexOf('}')+1));
 
       // Token usage + cost
       const inTok  = aiData.usage?.input_tokens  || 0;

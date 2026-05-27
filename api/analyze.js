@@ -106,11 +106,9 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model:      'claude-sonnet-4-6',
-        max_tokens: 800,
-        messages: [
-          { role: 'user',      content: prompt },
-          { role: 'assistant', content: '{'    },  // prefill — forces JSON-only, no preamble possible
-        ],
+        max_tokens: 1024,
+        system:     'You are a JSON-only financial analysis API. Output a single compact JSON object with no whitespace. Never write any text, reasoning, explanation, or markdown before or after the JSON. Your entire response must be one line starting with { and ending with }.',
+        messages:   [{ role: 'user', content: prompt }],
       }),
     });
 
@@ -121,22 +119,21 @@ export default async function handler(req, res) {
     }
 
     const data = await apiRes.json();
-    // Prefill means the API returns everything AFTER the '{' — prepend it back
-    const raw  = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
-    const text = '{' + raw;
+    const text  = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
 
-    // Strip accidental trailing markdown fences (prefill prevents leading ones)
-    const clean = text.replace(/\s*```\s*$/i, '').trim();
+    // Strip any accidental markdown fences, then find the JSON object boundaries
+    const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    const start = clean.indexOf('{');
     const end   = clean.lastIndexOf('}');
 
-    if (end === -1) {
+    if (start === -1 || end === -1) {
       res.setHeader('Access-Control-Allow-Origin', '*').setHeader('Content-Type', 'application/json')
         .status(500).json({ error: 'No JSON in response. Got: ' + clean.slice(0, 200) }); return;
     }
 
     let analysis;
     try {
-      analysis = JSON.parse(clean.slice(0, end + 1));
+      analysis = JSON.parse(clean.slice(start, end + 1));
     } catch (parseErr) {
       res.setHeader('Access-Control-Allow-Origin', '*').setHeader('Content-Type', 'application/json')
         .status(500).json({ error: `JSON parse failed: ${parseErr.message} | Raw: ${clean.slice(0, 200)}` }); return;
