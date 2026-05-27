@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   if (!q || q.length < 2) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(200).send(JSON.stringify([])); return; }
 
   try {
-    const res = await fetch(
+    const yRes = await fetch(
       `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&lang=en-US&region=DE&quotesCount=8&newsCount=0&enableFuzzyQuery=true&quotesQueryId=tss_match_phrase_query`,
       { signal: AbortSignal.timeout(5000),
         headers: {
@@ -14,9 +14,9 @@ export default async function handler(req, res) {
         }
       }
     );
-    if (!res.ok) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(200).send(JSON.stringify([])); return; }
+    if (!yRes.ok) { res.setHeader('Access-Control-Allow-Origin','*').setHeader('Content-Type','application/json').status(200).send(JSON.stringify([])); return; }
 
-    const data = await res.json();
+    const data = await yRes.json();
     const quotes = (data.quotes || [])
       .filter(q => q.symbol && q.quoteType !== 'FUTURE' && q.quoteType !== 'OPTION')
       .slice(0, 8)
