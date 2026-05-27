@@ -29,6 +29,11 @@
   .logo span { color: var(--muted); }
   .header-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  /* Language toggle */
+  .lang-toggle { display: flex; align-items: center; gap: 2px; margin-right: 10px; }
+  .lang-btn { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 5px; border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer; letter-spacing: 0.06em; transition: all 0.15s; }
+  .lang-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(200,255,0,0.3); }
+  .lang-sep { font-family: var(--mono); font-size: 10px; color: var(--muted2); }
 
   /* Search */
   .search-wrap { position: relative; margin-bottom: 14px; }
@@ -229,7 +234,14 @@
 
   <div class="header">
     <div class="logo">STOCK<span>PULSE</span></div>
-    <div class="header-dot"></div>
+    <div style="display:flex;align-items:center;">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</button>
+        <span class="lang-sep">|</span>
+        <button class="lang-btn" id="lang-tr" onclick="setLang('tr')">TR</button>
+      </div>
+      <div class="header-dot"></div>
+    </div>
   </div>
 
   <div class="search-wrap">
@@ -241,11 +253,11 @@
   </div>
 
   <div class="shortcuts-toggle" onclick="toggleShortcuts()">
-    <span class="shortcuts-toggle-label">Quick Access</span>
+    <span class="shortcuts-toggle-label" data-i18n="quick-access">Quick Access</span>
     <span class="shortcuts-arrow" id="shortcuts-arrow">▾</span>
   </div>
   <div class="shortcuts-body" id="shortcuts-body" style="max-height:0;">
-    <div class="group-label">🇪🇺 European Stocks</div>
+    <div class="group-label" data-i18n="eu-stocks">🇪🇺 European Stocks</div>
     <div class="quick">
       <button class="qbtn de" onclick="quick('AIR.DE')" title="Airbus">Airbus</button>
       <button class="qbtn de" onclick="quick('DTE.DE')" title="Deutsche Telekom">Telekom</button>
@@ -253,18 +265,18 @@
       <button class="qbtn de" onclick="quick('RACE.MI')" title="Ferrari (Milan)">Ferrari</button>
     </div>
 
-    <div class="group-label">🎮 Gaming</div>
+    <div class="group-label" data-i18n="gaming">🎮 Gaming</div>
     <div class="quick">
       <button class="qbtn" onclick="quick('NTO.F')" title="Nintendo Frankfurt">Nintendo</button>
     </div>
 
-    <div class="group-label">🚀 Space</div>
+    <div class="group-label" data-i18n="space">🚀 Space</div>
     <div class="quick">
       <button class="qbtn space" onclick="quick('RKLB')" title="Rocket Lab → 6RJ0.F (EUR)">Rocket Lab</button>
       <button class="qbtn space" onclick="quick('ASTS')" title="AST SpaceMobile → 3ZU0.F (EUR)">AST SpaceMobile</button>
     </div>
 
-    <div class="group-label">⚛️ Quantum Computing</div>
+    <div class="group-label" data-i18n="quantum">⚛️ Quantum Computing</div>
     <div class="quick">
       <button class="qbtn quantum" onclick="quick('IONQ')" title="IonQ → 0YB0.F (EUR)">IonQ</button>
       <button class="qbtn quantum" onclick="quick('RGTI')" title="Rigetti → A00.F (EUR)">Rigetti</button>
@@ -272,7 +284,7 @@
       <button class="qbtn quantum" onclick="quick('QUBT')" title="Quantum Computing Inc (NASDAQ, USD)">QUBT $</button>
     </div>
 
-    <div class="group-label">₿ Crypto</div>
+    <div class="group-label" data-i18n="crypto">₿ Crypto</div>
     <div class="quick">
       <button class="qbtn crypto" onclick="quick('BTC-EUR')" title="Bitcoin EUR">BTC</button>
       <button class="qbtn crypto" onclick="quick('ETH-EUR')" title="Ethereum EUR">ETH</button>
@@ -302,22 +314,22 @@
         <div class="price" id="r-price"></div>
         <div>
           <div class="change-badge" id="r-change"></div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:0.05em;">DAILY CHANGE</div>
+          <div data-i18n="daily-change" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:0.05em;">DAILY CHANGE</div>
         </div>
       </div>
       <div class="stats">
-        <div class="stat"><div class="stat-label">Mkt Cap</div><div class="stat-value" id="r-mcap">—</div></div>
-        <div class="stat"><div class="stat-label">52W High</div><div class="stat-value" id="r-high">—</div></div>
-        <div class="stat"><div class="stat-label">52W Low</div><div class="stat-value" id="r-low">—</div></div>
-        <div class="stat"><div class="stat-label">P/E RATIO</div><div class="stat-value" id="r-pe">—</div></div>
-        <div class="stat"><div class="stat-label">Avg Volume</div><div class="stat-value" id="r-vol">—</div></div>
-        <div class="stat"><div class="stat-label">Dividend</div><div class="stat-value" id="r-div">—</div></div>
+        <div class="stat"><div class="stat-label" data-i18n="mkt-cap">Mkt Cap</div><div class="stat-value" id="r-mcap">—</div></div>
+        <div class="stat"><div class="stat-label" data-i18n="52w-high">52W High</div><div class="stat-value" id="r-high">—</div></div>
+        <div class="stat"><div class="stat-label" data-i18n="52w-low">52W Low</div><div class="stat-value" id="r-low">—</div></div>
+        <div class="stat"><div class="stat-label" data-i18n="pe-ratio">P/E Ratio</div><div class="stat-value" id="r-pe">—</div></div>
+        <div class="stat"><div class="stat-label" data-i18n="avg-vol">Avg Volume</div><div class="stat-value" id="r-vol">—</div></div>
+        <div class="stat"><div class="stat-label" data-i18n="dividend">Dividend</div><div class="stat-value" id="r-div">—</div></div>
       </div>
     </div>
     <div id="profile-box" class="profile" style="display:none;"></div>
     <div class="chart-wrap" id="chart-wrap" style="display:none;">
       <div class="chart-header">
-        <span class="chart-label" id="chart-title">Price Chart</span>
+        <span class="chart-label" id="chart-title" data-i18n="price-chart">Price Chart</span>
         <div class="chart-range">
           <button class="range-btn active" id="btn-1d" onclick="setRange('1d')">1D</button>
           <button class="range-btn" id="btn-1w" onclick="setRange('1w')">1W</button>
@@ -336,19 +348,19 @@
         <span id="chart-high"></span>
       </div>
       <div class="chart-legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#00d084"></div>Price Chart</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00d084"></div><span data-i18n="price-chart">Price Chart</span></div>
         <div class="legend-item"><div class="legend-dot" style="background:rgba(255,200,0,0.7)"></div><span id="legend-ma1">MA20</span></div>
         <div class="legend-item"><div class="legend-dot" style="background:rgba(100,160,255,0.7)"></div><span id="legend-ma2">MA50</span></div>
       </div>
     </div>
     <div class="analysis-wrap" id="analysis-wrap">
       <div class="analysis-header">
-        <span class="analysis-title">⚡ AI Analysis</span>
-        <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()">Analyse</button>
+        <span class="analysis-title" data-i18n="ai-analysis">⚡ AI Analysis</span>
+        <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()" data-i18n="analyse">Analyse</button>
       </div>
       <div id="analysis-content"></div>
     </div>
-    <div class="section-title">Latest News</div>
+    <div class="section-title" data-i18n="latest-news">Latest News</div>
     <div id="news-list" class="news-list"></div>
     <div class="data-note" id="data-note">
       Price data · Yahoo Finance<br>
@@ -358,8 +370,8 @@
 
   <div id="empty" class="empty">
     <div class="empty-icon">📈</div>
-    <h2>Search any stock</h2>
-    <p>Enter a ticker or tap a shortcut above</p>
+    <h2 data-i18n="empty-title">Search any stock</h2>
+    <p data-i18n="empty-sub">Enter a ticker or tap a shortcut above</p>
   </div>
 
 </div>
@@ -368,6 +380,64 @@ const $ = id => document.getElementById(id);
 const show = id => $(id).style.display = '';
 const hide = id => $(id).style.display = 'none';
 const set  = (id, v) => $(id).textContent = v;
+
+// ── i18n ────────────────────────────────────────────────────────────────────
+const i18n = {
+  en: {
+    'quick-access':'Quick Access','eu-stocks':'🇪🇺 European Stocks','gaming':'🎮 Gaming',
+    'space':'🚀 Space','quantum':'⚛️ Quantum Computing','crypto':'₿ Crypto',
+    'daily-change':'DAILY CHANGE','mkt-cap':'Mkt Cap','52w-high':'52W High',
+    '52w-low':'52W Low','pe-ratio':'P/E Ratio','avg-vol':'Avg Volume','dividend':'Dividend',
+    'ai-analysis':'⚡ AI Analysis','analyse':'Analyse','reanalyse':'Re-analyse',
+    'analysing':'Analysing…','ai-loading':'AI is analysing price, fundamentals & sentiment…',
+    'price-chart':'Price Chart','latest-news':'Latest News',
+    'tab-val':'Valuation','tab-fund':'Fundamentals','tab-sent':'Sentiment','tab-risk':'Risks',
+    'fmv-label':'Fair Market Value','vs-current':'vs current','confidence':'Confidence',
+    'sig-under':'Undervalued','sig-over':'Overvalued','sig-fair':'Fair',
+    'verdict-under':'Undervalued','verdict-over':'Overvalued','verdict-fair':'Fairly Valued',
+    'disclaimer':'⚠ AI-generated analysis · Not financial advice · Do your own research',
+    'empty-title':'Search any stock','empty-sub':'Enter a ticker or tap a shortcut above',
+    'loading-sym':'Loading','not-found':'Not found.',
+    'no-price':'No price data for "%s". The ticker may be delisted or unsupported.',
+    'req-failed':'Request failed: ','analysis-failed':'Analysis failed',
+    'search-placeholder':'Company name or ticker — Porsche, AAPL, MUV2…',
+    'no-news':'No recent news found.',
+  },
+  tr: {
+    'quick-access':'Hızlı Erişim','eu-stocks':'🇪🇺 Avrupa Hisseleri','gaming':'🎮 Oyun',
+    'space':'🚀 Uzay','quantum':'⚛️ Kuantum Bilişim','crypto':'₿ Kripto',
+    'daily-change':'GÜNLÜK DEĞİŞİM','mkt-cap':'Piy. Değeri','52w-high':'52H Yüksek',
+    '52w-low':'52H Düşük','pe-ratio':'F/K Oranı','avg-vol':'Ort. Hacim','dividend':'Temettü',
+    'ai-analysis':'⚡ YZ Analizi','analyse':'Analiz Et','reanalyse':'Tekrar Analiz',
+    'analysing':'Analiz ediliyor…','ai-loading':'YZ fiyat, temel veriler ve duyarlılık analiz ediyor…',
+    'price-chart':'Fiyat Grafiği','latest-news':'Son Haberler',
+    'tab-val':'Değerleme','tab-fund':'Temel Analiz','tab-sent':'Duyarlılık','tab-risk':'Riskler',
+    'fmv-label':'Gerçek Piyasa Değeri','vs-current':'mevcut fiyata göre','confidence':'Güven',
+    'sig-under':'Düşük Değerli','sig-over':'Aşırı Değerli','sig-fair':'Adil',
+    'verdict-under':'Düşük Değerli','verdict-over':'Aşırı Değerli','verdict-fair':'Adil Değerli',
+    'disclaimer':'⚠ YZ tarafından oluşturuldu · Finansal tavsiye değildir · Kendi araştırmanızı yapın',
+    'empty-title':'Hisse Senedi Ara','empty-sub':'Ticker girin veya yukarıdaki kısayola dokunun',
+    'loading-sym':'Yükleniyor','not-found':'Bulunamadı.',
+    'no-price':'"%s" için fiyat verisi yok. Ticker geçersiz veya desteklenmiyor olabilir.',
+    'req-failed':'İstek başarısız: ','analysis-failed':'Analiz başarısız',
+    'search-placeholder':'Şirket adı veya ticker — Porsche, AAPL, MUV2…',
+    'no-news':'Son haber bulunamadı.',
+  },
+};
+let currentLang = localStorage.getItem('sp-lang') || 'en';
+function t(key) { return (i18n[currentLang] || i18n.en)[key] || key; }
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  $('ticker-input').placeholder = t('search-placeholder');
+  $('data-note').innerHTML = currentLang === 'tr'
+    ? 'Fiyat verisi · Yahoo Finance<br>Haberler · <span style="color:#e85d3a">Handelsblatt</span> · Uluslararası Kaynaklar · Yahoo Finance'
+    : 'Price data · Yahoo Finance<br>News · <span style="color:#e85d3a">Handelsblatt</span> · International Sources · Yahoo Finance';
+  $('lang-en').classList.toggle('active', currentLang === 'en');
+  $('lang-tr').classList.toggle('active', currentLang === 'tr');
+  const btn = $('analyze-btn');
+  if (btn && !btn.disabled) btn.textContent = t('analyse');
+}
+function setLang(lang) { currentLang = lang; localStorage.setItem('sp-lang', lang); applyLang(); }
 
 // Autocomplete
 let searchTimer = null;
@@ -496,11 +566,11 @@ function showErr(msg) { hide('loading'); hide('results'); $('error-box').textCon
 async function doSearch() {
   const sym = $('ticker-input').value.trim().toUpperCase();
   if (!sym) return;
-  setLoad('Lade ' + sym + '…');
+  setLoad(t('loading-sym') + ' ' + sym + '…');
   try {
     const res = await fetch('/api/stock?sym=' + encodeURIComponent(sym));
     const data = await res.json();
-    if (!res.ok) { showErr(data.error || 'Not found.'); return; }
+    if (!res.ok) { showErr(data.error || t('not-found')); return; }
 
     const { name, exchange, currency, price, prevClose, high52, low52, description, news } = data;
     const cs  = currSym(currency);
@@ -510,7 +580,7 @@ async function doSearch() {
     set('r-ticker', sym);
     set('r-exchange', exchange || 'XETRA/FSE');
 
-    if (!price) { showErr('No price data available for "' + sym + '". The ticker may be delisted or not supported.'); return; }
+    if (!price) { showErr(t('no-price').replace('%s', sym)); return; }
 
     set('r-price', cs + price.toFixed(dp));
 
@@ -577,7 +647,7 @@ async function doSearch() {
         newsEl.appendChild(card);
       });
     } else {
-      newsEl.innerHTML = '<div class="news-card"><div class="news-meta">No recent news found.</div></div>';
+      newsEl.innerHTML = `<div class="news-card"><div class="news-meta">${t('no-news')}</div></div>`;
     }
 
     // Store for analysis — include all valuation inputs
@@ -600,13 +670,13 @@ async function doSearch() {
     lastNewsData = news || [];
     // Reset analysis panel
     document.getElementById('analysis-content').innerHTML = '';
-    document.getElementById('analyze-btn').textContent = 'Analyse';
+    document.getElementById('analyze-btn').textContent = t('analyse');
     document.getElementById('analyze-btn').disabled = false;
 
     hide('loading');
     show('results');
   } catch (err) {
-    showErr('Request failed: ' + err.message);
+    showErr(t('req-failed') + err.message);
   }
 }
 
@@ -618,10 +688,10 @@ async function doSearch() {
     if (!lastStockData) return;
     const btn = document.getElementById('analyze-btn');
     btn.disabled = true;
-    btn.textContent = 'Analysing…';
+    btn.textContent = t('analysing');
 
     const content = document.getElementById('analysis-content');
-    content.innerHTML = '<div class="analysis-loading"><div class="spinner"></div><p>AI is analysing price, fundamentals & sentiment…</p></div>';
+    content.innerHTML = `<div class="analysis-loading"><div class="spinner"></div><p>${t('ai-loading')}</p></div>`;
 
     try {
       const payload = { ...lastStockData, news: lastNewsData || [] };
@@ -631,14 +701,14 @@ async function doSearch() {
         body: JSON.stringify(payload),
       });
       const analysis = await res.json();
-      if (!res.ok) throw new Error(analysis.error || 'Analysis failed');
+      if (!res.ok) throw new Error(analysis.error || t('analysis-failed'));
       renderAnalysis(analysis);
     } catch (err) {
       document.getElementById('analysis-content').innerHTML =
         '<div class="analysis-error">Error: ' + err.message + '</div>';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Re-analyse';
+      btn.textContent = t('reanalyse');
     }
   }
 
@@ -655,15 +725,17 @@ async function doSearch() {
       const upsideCls  = upside !== null ? (upside >= 0 ? 'up' : 'dn') : '';
       const verdictKey = a.fmvVerdict === 'Undervalued' ? 'under'
                        : a.fmvVerdict === 'Overvalued'  ? 'over' : 'fair';
-      const verdictTxt = a.fmvVerdict || '';
+      const verdictTxt = a.fmvVerdict === 'Undervalued' ? t('verdict-under')
+                       : a.fmvVerdict === 'Overvalued'  ? t('verdict-over')
+                       : a.fmvVerdict                   ? t('verdict-fair') : '';
       fmvHtml = `
         <div class="fmv-banner">
           <div class="fmv-left">
-            <div class="fmv-label">Fair Market Value</div>
+            <div class="fmv-label">${t('fmv-label')}</div>
             <div class="fmv-price">${a.fmv}</div>
           </div>
           <div class="fmv-right">
-            ${upsideStr ? `<div class="fmv-upside ${upsideCls}">${upsideStr} vs current</div>` : ''}
+            ${upsideStr ? `<div class="fmv-upside ${upsideCls}">${upsideStr} ${t('vs-current')}</div>` : ''}
             <div class="fmv-verdict ${verdictKey}">${verdictTxt}</div>
           </div>
         </div>`;
@@ -677,7 +749,10 @@ async function doSearch() {
           const sigCls = m.signal === 'Undervalued' ? 'Undervalued'
                        : m.signal === 'Overvalued'  ? 'Overvalued'
                        : m.signal === 'Fair'        ? 'Fair' : 'NA';
-          const sigTxt = m.signal === 'N/A' ? 'N/A' : m.signal;
+          const sigTxt = m.signal === 'N/A'         ? 'N/A'
+                       : m.signal === 'Undervalued' ? t('sig-under')
+                       : m.signal === 'Overvalued'  ? t('sig-over')
+                       : m.signal === 'Fair'        ? t('sig-fair') : m.signal;
           return `<div class="val-row">
             <div class="val-left">
               <div class="val-method">${m.method}</div>
@@ -703,16 +778,16 @@ async function doSearch() {
         <div class="rec-row">
           <div class="rec-badge ${rec}">${rec}</div>
           <div class="rec-meta">
-            <span class="rec-confidence">Confidence: ${confLabel}</span>
+            <span class="rec-confidence">${t('confidence')}: ${confLabel}</span>
           </div>
         </div>
         <div class="rec-summary">"${a.summary || ''}"</div>
         ${fmvHtml}
         <div class="analysis-tabs">
-          <button class="atab active" onclick="switchTab(this,'val')">Valuation</button>
-          <button class="atab" onclick="switchTab(this,'fund')">Fundamentals</button>
-          <button class="atab" onclick="switchTab(this,'sent')">Sentiment</button>
-          <button class="atab" onclick="switchTab(this,'risk')">Risks</button>
+          <button class="atab active" onclick="switchTab(this,'val')">${t('tab-val')}</button>
+          <button class="atab" onclick="switchTab(this,'fund')">${t('tab-fund')}</button>
+          <button class="atab" onclick="switchTab(this,'sent')">${t('tab-sent')}</button>
+          <button class="atab" onclick="switchTab(this,'risk')">${t('tab-risk')}</button>
         </div>
         <div class="atab-content">
           <div class="atab-panel active" id="tab-val">${valHtml || '—'}</div>
@@ -722,7 +797,7 @@ async function doSearch() {
             <ul class="risks-list">${riskItems}</ul>
           </div>
         </div>
-        <div class="disclaimer">⚠ AI-generated analysis · Not financial advice · Do your own research</div>
+        <div class="disclaimer">${t('disclaimer')}</div>
       </div>`;
 
     document.getElementById('analysis-content').innerHTML = html;
@@ -875,6 +950,9 @@ async function doSearch() {
 
     show('chart-wrap');
   }
+
+  // Init language (after all DOM is ready)
+  applyLang();
 </script>
 </body>
 </html>
