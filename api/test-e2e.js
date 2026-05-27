@@ -200,13 +200,14 @@ export default async function handler(req, res) {
         '1. [Reuters] Deutsche Telekom raises 2025 guidance on T-Mobile US strength',
         '2. [Bloomberg] Telekom fiber rollout accelerates across Germany',
         '3. [Yahoo Finance] DTE dividend confirmed, yield remains above 3.5%',
-        '', '## Output — respond ONLY with the JSON below, no markdown, no code fences:',
+        '', '## Output — respond ONLY with compact single-line JSON (no whitespace, no newlines, no indentation):',
         `- fmv: weighted avg of DCF + Graham + sector P/E target, formatted as "${cs} 0.00"`,
         '- fmvUpside: (fmv − price) / price × 100',
         '- fmvVerdict: "Undervalued" >10%, "Overvalued" <−10%, else "Fairly Valued"',
         '- signal: exactly "Undervalued", "Fair", "Overvalued", or "N/A"',
         '- valuation / fundamental / sentiment: MAX 1 concise sentence each',
         '- recommendation (BUY/HOLD/SELL) derived from all 4 sections combined',
+        '- IMPORTANT: output must be a single line of JSON with no whitespace between tokens',
         '', schema,
       ].join('\n');
 
@@ -214,7 +215,7 @@ export default async function handler(req, res) {
       const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 700, messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
       });
       if (!aiRes.ok) throw new Error(`HTTP ${aiRes.status}: ${(await aiRes.text()).slice(0,200)}`);
       const aiData = await aiRes.json();

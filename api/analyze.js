@@ -84,13 +84,14 @@ export default async function handler(req, res) {
     '## Recent News',
     newsText,
     '',
-    '## Output — respond ONLY with the JSON below, no markdown, no code fences:',
+    '## Output — respond ONLY with compact single-line JSON (no whitespace, no newlines, no indentation):',
     `- fmv: weighted avg of DCF + Graham + sector P/E target, formatted as "${cs} 0.00"`,
     '- fmvUpside: (fmv − price) / price × 100',
     '- fmvVerdict: "Undervalued" >10%, "Overvalued" <−10%, else "Fairly Valued"',
     '- signal: exactly "Undervalued", "Fair", "Overvalued", or "N/A"',
     '- valuation / fundamental / sentiment: MAX 1 concise sentence each',
     '- recommendation (BUY/HOLD/SELL) derived from all 4 sections combined',
+    '- IMPORTANT: output must be a single line of JSON with no whitespace between tokens',
     '',
     schema,
   ].join('\n');
@@ -105,7 +106,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model:      'claude-sonnet-4-6',
-        max_tokens: 700,
+        max_tokens: 800,
         messages:   [{ role: 'user', content: prompt }],
       }),
     });
