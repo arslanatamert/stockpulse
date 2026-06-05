@@ -1,6 +1,15 @@
 {
+  "version": 2,
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/$1" }
-  ]
+    { "src": "/(.*)",     "dest": "/$1" }
+  ],
+  "crons": [
+    { "path": "/api/report/submit-batch", "schedule": "0 5 * * 1-5" },
+    { "path": "/api/report/send",         "schedule": "0 7 * * 1-5" }
+  ],
+  "functions": {
+    "api/report/submit-batch.js": { "maxDuration": 60 },
+    "api/report/send.js":         { "maxDuration": 60 }
+  }
 }
