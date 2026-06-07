@@ -106,7 +106,7 @@ export default async function handler(req, res) {
     .map(s => ({
       ...s,
       ...analysisMap[s.sym.replace(/\./g, '_')],
-      score: scoreStock(analysisMap[s.sym]),
+      score: scoreStock(analysisMap[s.sym.replace(/\./g, '_')]),
     }))
     .sort((a, b) => b.score - a.score);
 
