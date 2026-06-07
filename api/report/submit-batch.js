@@ -140,7 +140,7 @@ export default async function handler(req, res) {
       news:              stock.news,
     });
     return {
-      custom_id: stock.sym,
+      custom_id: stock.sym.replace(/\./g, '_'),
       params: {
         model:      'claude-sonnet-4-6',
         max_tokens: 1024,

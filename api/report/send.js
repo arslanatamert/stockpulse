@@ -95,17 +95,17 @@ export default async function handler(req, res) {
         const text = (result.message?.content || [])
           .filter(b => b.type === 'text').map(b => b.text).join('').trim();
         const analysis = parseAnalysis(text);
-        if (analysis) analysisMap[custom_id] = analysis;
+        if (analysis) analysisMap[custom_id.replace(/\./g, '_')] = analysis;
       }
     } catch {}
   }
 
   // --- Step 4: Merge stock data with analysis, score, and sort ---
   const rankedStocks = stocks
-    .filter(s => analysisMap[s.sym])
+    .filter(s => analysisMap[s.sym.replace(/\./g, '_')])
     .map(s => ({
       ...s,
-      ...analysisMap[s.sym],
+      ...analysisMap[s.sym.replace(/\./g, '_')],
       score: scoreStock(analysisMap[s.sym]),
     }))
     .sort((a, b) => b.score - a.score);
