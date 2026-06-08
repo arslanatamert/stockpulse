@@ -1,129 +1,122 @@
-// Fetches FTSE All-World-equivalent holdings via Vanguard's US-listed VT ETF on FMP.
-// VT tracks the FTSE Global All-Cap Index — same universe as VWCE (FTSE All-World).
-// Results are cached in Redis for 7 days to avoid repeated FMP calls.
-// Returns array of { sym, label } ready for Yahoo Finance price fetching.
+// Representative FTSE All-World pool (~105 stocks) covering US, Europe, and Asia-Pacific.
+// All tickers are verified to work with Yahoo Finance.
+// 10 are drawn daily via date-seeded shuffle in submit-batch.js.
 
-async function upstashGet(key) {
-  const url   = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return null;
-  const r = await fetch(`${url}/get/${encodeURIComponent(key)}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!r.ok) return null;
-  const { result } = await r.json();
-  return result;
-}
-
-async function upstashSet(key, value, ttlSeconds) {
-  const url   = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return;
-  await fetch(`${url}/pipeline`, {
-    method:  'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body:    JSON.stringify([['SET', key, value, 'EX', ttlSeconds]]),
-  });
-}
-
-// Top-50 FTSE All-World holdings as of Jun 2026 — used if FMP is unavailable.
-const FALLBACK_POOL = [
-  { sym: 'NVDA',  label: 'Nvidia'              },
-  { sym: 'AAPL',  label: 'Apple'               },
-  { sym: 'MSFT',  label: 'Microsoft'           },
-  { sym: 'AMZN',  label: 'Amazon'              },
-  { sym: 'GOOGL', label: 'Alphabet'            },
-  { sym: 'AVGO',  label: 'Broadcom'            },
-  { sym: 'META',  label: 'Meta'                },
-  { sym: 'TSM',   label: 'TSMC'                },
-  { sym: 'TSLA',  label: 'Tesla'               },
-  { sym: 'JPM',   label: 'JPMorgan'            },
-  { sym: 'LLY',   label: 'Eli Lilly'           },
-  { sym: 'V',     label: 'Visa'                },
-  { sym: 'XOM',   label: 'ExxonMobil'          },
-  { sym: 'UNH',   label: 'UnitedHealth'        },
-  { sym: 'MA',    label: 'Mastercard'          },
-  { sym: 'JNJ',   label: 'Johnson & Johnson'   },
-  { sym: 'NFLX',  label: 'Netflix'             },
-  { sym: 'COST',  label: 'Costco'              },
-  { sym: 'WMT',   label: 'Walmart'             },
-  { sym: 'ORCL',  label: 'Oracle'              },
-  { sym: 'BAC',   label: 'Bank of America'     },
-  { sym: 'PG',    label: 'P&G'                 },
-  { sym: 'HD',    label: 'Home Depot'          },
-  { sym: 'GS',    label: 'Goldman Sachs'       },
-  { sym: 'ABBV',  label: 'AbbVie'              },
-  { sym: 'AMD',   label: 'AMD'                 },
-  { sym: 'MRK',   label: 'Merck'               },
-  { sym: 'CVX',   label: 'Chevron'             },
-  { sym: 'CRM',   label: 'Salesforce'          },
-  { sym: 'DIS',   label: 'Disney'              },
-  { sym: 'ASML',  label: 'ASML'                },
-  { sym: 'NVO',   label: 'Novo Nordisk'        },
-  { sym: 'SAP',   label: 'SAP'                 },
-  { sym: 'TM',    label: 'Toyota'              },
-  { sym: 'SONY',  label: 'Sony'                },
-  { sym: 'BABA',  label: 'Alibaba'             },
-  { sym: 'INFY',  label: 'Infosys'             },
-  { sym: 'AZN',   label: 'AstraZeneca'         },
-  { sym: 'SHEL',  label: 'Shell'               },
-  { sym: 'HSBC',  label: 'HSBC'                },
-  { sym: 'NSRGY', label: 'Nestlé'              },
-  { sym: 'RHHBY', label: 'Roche'               },
-  { sym: 'NVS',   label: 'Novartis'            },
-  { sym: 'BP',    label: 'BP'                  },
-  { sym: 'GSK',   label: 'GSK'                 },
-  { sym: 'LVMUY', label: 'LVMH'               },
-  { sym: 'LRLCY', label: "L'Oréal"             },
-  { sym: 'TCEHY', label: 'Tencent'             },
-  { sym: 'INTC',  label: 'Intel'               },
-  { sym: 'BRK-B', label: 'Berkshire Hathaway'  },
+const POOL = [
+  // ── United States — Technology ───────────────────────────────────────────
+  { sym: 'NVDA',    label: 'Nvidia'             },
+  { sym: 'AAPL',    label: 'Apple'              },
+  { sym: 'MSFT',    label: 'Microsoft'          },
+  { sym: 'AMZN',    label: 'Amazon'             },
+  { sym: 'GOOGL',   label: 'Alphabet'           },
+  { sym: 'AVGO',    label: 'Broadcom'           },
+  { sym: 'META',    label: 'Meta'               },
+  { sym: 'TSLA',    label: 'Tesla'              },
+  { sym: 'AMD',     label: 'AMD'                },
+  { sym: 'INTC',    label: 'Intel'              },
+  { sym: 'ORCL',    label: 'Oracle'             },
+  { sym: 'CRM',     label: 'Salesforce'         },
+  { sym: 'CSCO',    label: 'Cisco'              },
+  { sym: 'QCOM',    label: 'Qualcomm'           },
+  { sym: 'TXN',     label: 'Texas Instruments'  },
+  { sym: 'AMAT',    label: 'Applied Materials'  },
+  // ── United States — Financials ────────────────────────────────────────────
+  { sym: 'JPM',     label: 'JPMorgan'           },
+  { sym: 'BAC',     label: 'Bank of America'    },
+  { sym: 'GS',      label: 'Goldman Sachs'      },
+  { sym: 'WFC',     label: 'Wells Fargo'        },
+  { sym: 'MS',      label: 'Morgan Stanley'     },
+  { sym: 'V',       label: 'Visa'               },
+  { sym: 'MA',      label: 'Mastercard'         },
+  { sym: 'BRK-B',   label: 'Berkshire Hathaway' },
+  // ── United States — Healthcare ────────────────────────────────────────────
+  { sym: 'LLY',     label: 'Eli Lilly'          },
+  { sym: 'JNJ',     label: 'Johnson & Johnson'  },
+  { sym: 'PFE',     label: 'Pfizer'             },
+  { sym: 'ABBV',    label: 'AbbVie'             },
+  { sym: 'MRK',     label: 'Merck'              },
+  { sym: 'UNH',     label: 'UnitedHealth'       },
+  { sym: 'AMGN',    label: 'Amgen'              },
+  // ── United States — Consumer & Industrials ────────────────────────────────
+  { sym: 'WMT',     label: 'Walmart'            },
+  { sym: 'COST',    label: 'Costco'             },
+  { sym: 'HD',      label: 'Home Depot'         },
+  { sym: 'PG',      label: 'P&G'                },
+  { sym: 'KO',      label: 'Coca-Cola'          },
+  { sym: 'PEP',     label: 'PepsiCo'            },
+  { sym: 'MCD',     label: "McDonald's"         },
+  { sym: 'NKE',     label: 'Nike'               },
+  { sym: 'NFLX',    label: 'Netflix'            },
+  { sym: 'DIS',     label: 'Disney'             },
+  { sym: 'XOM',     label: 'ExxonMobil'         },
+  { sym: 'CVX',     label: 'Chevron'            },
+  { sym: 'CAT',     label: 'Caterpillar'        },
+  { sym: 'RTX',     label: 'RTX Corp'           },
+  // ── Europe — Germany ─────────────────────────────────────────────────────
+  { sym: 'SAP.DE',  label: 'SAP'                },
+  { sym: 'SIE.DE',  label: 'Siemens'            },
+  { sym: 'BMW.DE',  label: 'BMW'                },
+  { sym: 'MBG.DE',  label: 'Mercedes-Benz'      },
+  { sym: 'BAS.DE',  label: 'BASF'               },
+  { sym: 'ADS.DE',  label: 'Adidas'             },
+  { sym: 'MUV2.DE', label: 'Munich Re'          },
+  { sym: 'DBK.DE',  label: 'Deutsche Bank'      },
+  { sym: 'HEN3.DE', label: 'Henkel'             },
+  // ── Europe — France ───────────────────────────────────────────────────────
+  { sym: 'MC.PA',   label: 'LVMH'               },
+  { sym: 'OR.PA',   label: "L'Oréal"            },
+  { sym: 'SAN.PA',  label: 'Sanofi'             },
+  { sym: 'TTE.PA',  label: 'TotalEnergies'      },
+  { sym: 'BNP.PA',  label: 'BNP Paribas'        },
+  { sym: 'AI.PA',   label: 'Air Liquide'        },
+  { sym: 'RMS.PA',  label: 'Hermès'             },
+  { sym: 'SU.PA',   label: 'Schneider Electric' },
+  // ── Europe — Switzerland ──────────────────────────────────────────────────
+  { sym: 'NESN.SW', label: 'Nestlé'             },
+  { sym: 'ROG.SW',  label: 'Roche'              },
+  { sym: 'NOVN.SW', label: 'Novartis'           },
+  { sym: 'ABBN.SW', label: 'ABB'                },
+  { sym: 'ZURN.SW', label: 'Zurich Insurance'   },
+  // ── Europe — United Kingdom ───────────────────────────────────────────────
+  { sym: 'AZN.L',   label: 'AstraZeneca'        },
+  { sym: 'SHEL.L',  label: 'Shell'              },
+  { sym: 'HSBA.L',  label: 'HSBC'               },
+  { sym: 'BP.L',    label: 'BP'                 },
+  { sym: 'GSK.L',   label: 'GSK'                },
+  { sym: 'ULVR.L',  label: 'Unilever'           },
+  { sym: 'RIO.L',   label: 'Rio Tinto'          },
+  { sym: 'BHP.L',   label: 'BHP Group'          },
+  { sym: 'BARC.L',  label: 'Barclays'           },
+  // ── Europe — Netherlands / Nordics ───────────────────────────────────────
+  { sym: 'ASML.AS', label: 'ASML'               },
+  { sym: 'HEIA.AS', label: 'Heineken'           },
+  { sym: 'INGA.AS', label: 'ING Group'          },
+  { sym: 'NOK',     label: 'Nokia'              },
+  { sym: 'ERIC',    label: 'Ericsson'           },
+  // ── Asia-Pacific — Japan (US ADRs) ───────────────────────────────────────
+  { sym: 'TM',      label: 'Toyota'             },
+  { sym: 'SONY',    label: 'Sony'               },
+  { sym: 'HMC',     label: 'Honda'              },
+  { sym: 'SFTBY',   label: 'SoftBank'           },
+  { sym: 'MUFG',    label: 'Mitsubishi UFJ'     },
+  { sym: 'KB',      label: 'KB Financial'       },
+  // ── Asia-Pacific — Taiwan / China / India ─────────────────────────────────
+  { sym: 'TSM',     label: 'TSMC'               },
+  { sym: 'BABA',    label: 'Alibaba'            },
+  { sym: 'BIDU',    label: 'Baidu'              },
+  { sym: 'TCEHY',   label: 'Tencent'            },
+  { sym: 'JD',      label: 'JD.com'             },
+  { sym: 'INFY',    label: 'Infosys'            },
+  { sym: 'HDB',     label: 'HDFC Bank'          },
+  { sym: 'IBN',     label: 'ICICI Bank'         },
+  { sym: 'WIT',     label: 'Wipro'              },
+  // ── Asia-Pacific — Australia / Other ─────────────────────────────────────
+  { sym: 'BHP',     label: 'BHP Group'          },
+  { sym: 'RIO',     label: 'Rio Tinto'          },
+  { sym: 'NVO',     label: 'Novo Nordisk'       },
+  { sym: 'SMFG',    label: 'Sumitomo Mitsui'    },
 ];
 
-const CACHE_KEY = 'report:ftse_pool';
-const CACHE_TTL = 7 * 24 * 3600; // 7 days
-
 export async function fetchFtsePool() {
-  // 1. Try Redis cache
-  const cached = await upstashGet(CACHE_KEY);
-  if (cached) {
-    try {
-      const pool = JSON.parse(cached);
-      if (Array.isArray(pool) && pool.length >= 20) return pool;
-    } catch {}
-  }
-
-  // 2. Try FMP ETF holdings for VT (Vanguard Total World Stock ETF)
-  const fmpKey = process.env.FMP_API_KEY;
-  if (!fmpKey) return FALLBACK_POOL;
-
-  try {
-    const res = await fetch(
-      `https://financialmodelingprep.com/stable/etf-holdings?symbol=VT&apikey=${fmpKey}`,
-      { signal: AbortSignal.timeout(10000) }
-    );
-    if (!res.ok) return FALLBACK_POOL;
-
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length < 10) return FALLBACK_POOL;
-
-    // Keep only clean US tickers with meaningful weight (>0.03%) to avoid micro-caps
-    const pool = data
-      .filter(h => {
-        const sym = h.symbol || h.asset || '';
-        const weight = Number(h.weightPercentage || 0);
-        return /^[A-Z]{1,5}$/.test(sym) && weight > 0.03;
-      })
-      .map(h => ({
-        sym:   h.symbol || h.asset,
-        label: h.name   || h.symbol || h.asset,
-      }));
-
-    if (pool.length < 20) return FALLBACK_POOL;
-
-    await upstashSet(CACHE_KEY, JSON.stringify(pool), CACHE_TTL);
-    return pool;
-  } catch {
-    return FALLBACK_POOL;
-  }
+  return POOL;
 }
