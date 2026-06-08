@@ -12,6 +12,19 @@ function confDot(conf) {
   return `<span style="color:${colors[conf] || '#aaa'};">●</span> ${conf}`;
 }
 
+function scoreBreakdown(s) {
+  const recScore  = s.recommendation === 'BUY' ? 40 : s.recommendation === 'HOLD' ? 15 : 0;
+  const confScore = s.confidence === 'High' ? 20 : s.confidence === 'Medium' ? 12 : 5;
+  const upsideVal = typeof s.fmvUpside === 'number' ? s.fmvUpside : parseFloat(s.fmvUpside) || 0;
+  const fmvScore  = Math.round(Math.min(25, Math.max(0, upsideVal * 0.5)));
+  const text      = ((s.sentiment || '') + ' ' + (s.fundamental || '')).toLowerCase();
+  const pos = ['positive','strong','bullish','growth','beat','upgrade','record','surge','robust','solid','momentum','outperform'];
+  const neg = ['negative','weak','bearish','miss','downgrade','concern','loss','decline','risk','pressure','headwind'];
+  const sentScore = pos.filter(w => text.includes(w)).length > neg.filter(w => text.includes(w)).length ? 15
+                  : pos.filter(w => text.includes(w)).length < neg.filter(w => text.includes(w)).length ? 0 : 8;
+  return { recScore, confScore, fmvScore, sentScore };
+}
+
 function upside(val) {
   const n = typeof val === 'number' ? val : parseFloat(val) || 0;
   const color = n >= 10 ? '#00d084' : n <= -10 ? '#ff4d4d' : '#f59e0b';
@@ -48,18 +61,24 @@ export function buildEmailHtml({ asOf, rankedStocks, buySignals, topPick }) {
       </td>
     </tr>` : '';
 
-  const buyRows = buySignals.map((s, i) => `
+  const buyRows = buySignals.map((s, i) => {
+    const bd = scoreBreakdown(s);
+    return `
     <tr style="border-bottom:1px solid #222;">
       <td style="padding:10px 8px;color:#666;font-size:13px;">${i + 1}</td>
       <td style="padding:10px 8px;">
         <p style="color:#fff;margin:0;font-size:14px;font-weight:bold;">${s.label}</p>
         <p style="color:#555;margin:0;font-size:11px;">${s.sym}</p>
       </td>
-      <td style="padding:10px 8px;text-align:center;"><span style="color:#c8ff00;font-weight:bold;">${s.score}</span></td>
+      <td style="padding:10px 8px;text-align:center;">
+        <span style="color:#c8ff00;font-weight:bold;font-size:16px;">${s.score}</span><br>
+        <span style="color:#444;font-size:10px;white-space:nowrap;">R:${bd.recScore}+C:${bd.confScore}+F:${bd.fmvScore}+S:${bd.sentScore}</span>
+      </td>
       <td style="padding:10px 8px;text-align:center;">${upside(s.fmvUpside)}</td>
       <td style="padding:10px 8px;">${confDot(s.confidence)}</td>
       <td style="padding:10px 8px;color:#aaa;font-size:12px;max-width:200px;">${s.summary || ''}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   const watchlistRows = [...holdList, ...sellList].map(s => `
     <tr style="border-bottom:1px solid #1a1a1a;">
@@ -104,6 +123,24 @@ export function buildEmailHtml({ asOf, rankedStocks, buySignals, topPick }) {
               <th style="padding:8px;color:#555;font-size:11px;font-family:Arial,sans-serif;text-align:left;">Summary</th>
             </tr>
             ${buyRows}
+          </table>
+          <!-- Score methodology legend -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:6px;">
+            <tr>
+              <td colspan="4" style="padding:8px 12px 2px;color:#444;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;font-family:Arial,sans-serif;">Score = R + C + F + S &nbsp;(max 100)</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;"><span style="color:#c8ff00;font-weight:bold;">R</span> Rec</td>
+              <td style="padding:4px 4px;font-family:Arial,sans-serif;font-size:11px;color:#444;">BUY 40 · HOLD 15 · SELL 0</td>
+              <td style="padding:4px 12px;font-family:Arial,sans-serif;font-size:11px;color:#666;"><span style="color:#c8ff00;font-weight:bold;">C</span> Confidence</td>
+              <td style="padding:4px 4px;font-family:Arial,sans-serif;font-size:11px;color:#444;">High 20 · Med 12 · Low 5</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 12px 8px;font-family:Arial,sans-serif;font-size:11px;color:#666;"><span style="color:#c8ff00;font-weight:bold;">F</span> FMV upside</td>
+              <td style="padding:4px 4px 8px;font-family:Arial,sans-serif;font-size:11px;color:#444;">upside% × 0.5, max 25</td>
+              <td style="padding:4px 12px 8px;font-family:Arial,sans-serif;font-size:11px;color:#666;"><span style="color:#c8ff00;font-weight:bold;">S</span> Sentiment</td>
+              <td style="padding:4px 4px 8px;font-family:Arial,sans-serif;font-size:11px;color:#444;">keyword scan: 15 / 8 / 0</td>
+            </tr>
           </table>
         </td>
       </tr>` : `
@@ -161,12 +198,19 @@ export function buildEmailText({ asOf, buySignals, topPick, rankedStocks }) {
     lines.push('BUY SIGNALS:');
     buySignals.forEach((s, i) => {
       const up = typeof s.fmvUpside === 'number' ? s.fmvUpside.toFixed(1) : s.fmvUpside;
-      lines.push(`${i + 1}. ${s.label} (${s.sym}) — Score: ${s.score} · FMV upside: +${up}% · ${s.confidence} confidence`);
+      const bd = scoreBreakdown(s);
+      lines.push(`${i + 1}. ${s.label} (${s.sym}) — Score: ${s.score} [R:${bd.recScore}+C:${bd.confScore}+F:${bd.fmvScore}+S:${bd.sentScore}] · FMV upside: +${up}% · ${s.confidence} confidence`);
       if (s.summary) lines.push(`   ${s.summary}`);
     });
     lines.push('');
   }
 
+  lines.push('Score methodology (max 100):');
+  lines.push('  R Recommendation : BUY=40, HOLD=15, SELL=0');
+  lines.push('  C Confidence      : High=20, Medium=12, Low=5');
+  lines.push('  F FMV Upside      : upside% × 0.5, capped at 25');
+  lines.push('  S Sentiment       : keyword scan of AI text → 15/8/0');
+  lines.push('');
   lines.push('---');
   lines.push('Automated analysis — not financial advice.');
   return lines.join('\n');
