@@ -1,10 +1,11 @@
-// Cron job #1 — runs at 5:00 AM UTC Mon–Fri (6 AM CET / 7 AM CEST).
+// Cron job #1 — runs at 3:00 AM UTC Mon–Fri (4 AM CET / 5 AM CEST).
 // Fetches price + fundamental + news data for all stocks, builds Claude prompts,
 // submits them as an Anthropic Batch, then stores the batch ID + stock snapshot
 // in Upstash Redis (TTL 6h) for the send job to retrieve at 7 AM UTC.
 
 import { buildPrompt } from '../lib/buildPrompt.js';
 import { fetchFmpFundamentals } from '../lib/fetchFmp.js';
+import { fetchFtsePool } from '../lib/fetchFtsePool.js';
 
 export const config = { maxDuration: 60 };
 
@@ -31,6 +32,25 @@ const STOCKS = [
   { sym: 'SOL-EUR',  label: 'Solana'           },
   { sym: 'MATIC-EUR',label: 'Polygon'          },
 ];
+
+// Deterministic Fisher-Yates shuffle seeded by an integer (LCG).
+// Using today's UTC date as seed keeps the selection stable across retries
+// but rotates to a different 10 each calendar day.
+function seededSample(arr, n, seed) {
+  const a = [...arr];
+  let s = seed >>> 0;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = Math.imul(s, 1664525) + 1013904223 >>> 0;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, n);
+}
+
+function dailySeed() {
+  const d = new Date();
+  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+}
 
 function parseRss(text, sourceLabel) {
   return [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 8).map(m => {
@@ -71,8 +91,8 @@ export default async function handler(req, res) {
   }
 
   // Allow custom stocks via request body: [{ sym: "AAPL", label: "Apple" }, ...]
-  // Falls back to the default 15 if not provided.
-  let stocks = STOCKS;
+  // Falls back to the default 15 + 10 daily FTSE All-World picks if not provided.
+  let stocks;
   if (req.body?.stocks && Array.isArray(req.body.stocks) && req.body.stocks.length > 0) {
     const invalid = req.body.stocks.find(s => !s.sym || !s.label);
     if (invalid) {
@@ -81,6 +101,10 @@ export default async function handler(req, res) {
       });
     }
     stocks = req.body.stocks;
+  } else {
+    const pool   = await fetchFtsePool();
+    const daily10 = seededSample(pool, 10, dailySeed());
+    stocks = [...STOCKS, ...daily10];
   }
 
   // --- Step 1: Fetch Yahoo Finance price data for all stocks in parallel ---
@@ -195,7 +219,8 @@ export default async function handler(req, res) {
     ok: true,
     batchId,
     stocks: enriched.length,
-    skipped: STOCKS.length - enriched.length,
+    skipped: stocks.length - enriched.length,
     batchStatus: batch.processing_status,
+    dailyExtra: stocks.length - STOCKS.length,
   });
 }
