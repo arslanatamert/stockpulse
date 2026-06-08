@@ -4,7 +4,6 @@
 
 import { scoreStock }         from '../lib/scoreStock.js';
 import { buildEmailHtml, buildEmailText } from '../lib/emailTemplate.js';
-import { buildWhatsAppText }  from '../lib/whatsappTemplate.js';
 
 export const config = { maxDuration: 60 };
 
@@ -162,6 +161,8 @@ export default async function handler(req, res) {
 
   if (twilioSid && twilioToken && fromWA && toWA) {
     const twilioAuth = Buffer.from(`${twilioSid}:${twilioToken}`).toString('base64');
+    const waDate = new Date(report.asOf).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const waUpside = topPick && typeof topPick.fmvUpside === 'number' ? topPick.fmvUpside.toFixed(1) : topPick?.fmvUpside ?? 'N/A';
     const waRes = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
       {
@@ -171,9 +172,17 @@ export default async function handler(req, res) {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          From: `whatsapp:${fromWA}`,
-          To:   `whatsapp:${toWA}`,
-          Body: buildWhatsAppText(report),
+          From:             `whatsapp:${fromWA}`,
+          To:               `whatsapp:${toWA}`,
+          ContentSid:       'HX19044d79f6320175eb96357d88af575f',
+          ContentVariables: JSON.stringify({
+            '1': waDate,
+            '2': topPick?.label ?? 'None',
+            '3': String(waUpside),
+            '4': topPick?.confidence ?? 'N/A',
+            '5': String(buySignals.length),
+            '6': String(rankedStocks.length),
+          }),
         }),
       }
     );

@@ -70,8 +70,21 @@ export default async function handler(req, res) {
     return res.setHeader('Content-Type', 'application/json').status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
   }
 
+  // Allow custom stocks via request body: [{ sym: "AAPL", label: "Apple" }, ...]
+  // Falls back to the default 15 if not provided.
+  let stocks = STOCKS;
+  if (req.body?.stocks && Array.isArray(req.body.stocks) && req.body.stocks.length > 0) {
+    const invalid = req.body.stocks.find(s => !s.sym || !s.label);
+    if (invalid) {
+      return res.setHeader('Content-Type', 'application/json').status(400).json({
+        error: 'Each stock must have { sym, label }',
+      });
+    }
+    stocks = req.body.stocks;
+  }
+
   // --- Step 1: Fetch Yahoo Finance price data for all stocks in parallel ---
-  const priceData = await Promise.all(STOCKS.map(async ({ sym, label }) => {
+  const priceData = await Promise.all(stocks.map(async ({ sym, label }) => {
     try {
       const [r1d, r1y] = await Promise.all([
         fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=5m&range=1d`,  { headers: YH_HEADERS }),

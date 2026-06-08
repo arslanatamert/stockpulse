@@ -5,7 +5,7 @@
     { "src": "/(.*)",     "dest": "/$1" }
   ],
   "crons": [
-    { "path": "/api/report/submit-batch", "schedule": "0 5 * * 1-5" },
+    { "path": "/api/report/submit-batch", "schedule": "0 3 * * 1-5" },
     { "path": "/api/report/send",         "schedule": "0 7 * * 1-5" }
   ],
   "functions": {
