@@ -121,7 +121,6 @@ export default async function handler(req, res) {
   };
 
   const errors = [];
-  let twilioDebug = null;
 
   // --- Step 5: Send email via Resend ---
   const resendKey   = process.env.RESEND_API_KEY;
@@ -178,11 +177,10 @@ export default async function handler(req, res) {
         }),
       }
     );
-    const waBody = await waRes.json().catch(() => ({}));
     if (!waRes.ok) {
-      errors.push(`WhatsApp failed (${waRes.status}): ${JSON.stringify(waBody).slice(0, 200)}`);
+      const err = await waRes.text();
+      errors.push(`WhatsApp failed (${waRes.status}): ${err.slice(0, 200)}`);
     }
-    twilioDebug = { sid: waBody.sid, status: waBody.status, errorCode: waBody.error_code, errorMessage: waBody.error_message };
   } else {
     errors.push('Twilio env vars not set — WhatsApp skipped');
   }
@@ -194,6 +192,5 @@ export default async function handler(req, res) {
     topPick: topPick?.label || null,
     asOf: report.asOf,
     errors: errors.length > 0 ? errors : undefined,
-    twilioDebug: twilioDebug || undefined,
   });
 }
