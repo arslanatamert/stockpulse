@@ -125,9 +125,11 @@ export default async function handler(req, res) {
   // --- Step 5: Send email via Resend ---
   const resendKey   = process.env.RESEND_API_KEY;
   const fromEmail   = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-  const toEmail     = process.env.REPORT_EMAIL || 'atamertarslan@gmail.com';
+  const toEmail     = process.env.REPORT_EMAIL;
+  const toEmail2    = process.env.REPORT_EMAIL_2;
+  const toEmails    = [toEmail, toEmail2].filter(Boolean);
 
-  if (resendKey) {
+  if (resendKey && toEmails.length > 0) {
     const subject = topPick
       ? `StockPulse Daily: ${buySignals.length} BUY Signal${buySignals.length !== 1 ? 's' : ''} — Top Pick: ${topPick.label}`
       : `StockPulse Daily: No BUY Signals Today`;
@@ -140,7 +142,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         from:    `StockPulse <${fromEmail}>`,
-        to:      [toEmail],
+        to:      toEmails,
         subject,
         html:    buildEmailHtml(report),
         text:    buildEmailText(report),
