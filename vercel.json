@@ -6,7 +6,7 @@
   ],
   "crons": [
     { "path": "/api/report/submit-batch", "schedule": "0 3 * * 1-5" },
-    { "path": "/api/report/send",         "schedule": "0 7 * * 1-5" }
+    { "path": "/api/report/send",         "schedule": "0 6 * * 1-5" }
   ],
   "functions": {
     "api/report/submit-batch.js": { "maxDuration": 60 },

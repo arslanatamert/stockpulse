@@ -1,4 +1,4 @@
-// Cron job #2 — runs at 7:00 AM UTC Mon–Fri (8 AM CET / 9 AM CEST).
+// Cron job #2 — runs at 6:00 AM UTC Mon–Fri (7 AM CET / 8 AM CEST).
 // Retrieves Anthropic Batch results, scores + ranks stocks, sends HTML email
 // via Resend and a WhatsApp summary via Twilio.
 
