@@ -5,7 +5,7 @@
 
 import { buildPrompt } from '../lib/buildPrompt.js';
 import { fetchFmpFundamentals } from '../lib/fetchFmp.js';
-import { fetchFtsePool } from '../lib/fetchFtsePool.js';
+import { fetchMsciSmallCapPool } from '../lib/fetchFtsePool.js';
 
 export const config = { maxDuration: 60 };
 
@@ -102,7 +102,7 @@ export default async function handler(req, res) {
     }
     stocks = req.body.stocks;
   } else {
-    const pool   = await fetchFtsePool();
+    const pool   = await fetchMsciSmallCapPool();
     const daily10 = seededSample(pool, 10, dailySeed());
     stocks = [...STOCKS, ...daily10];
   }
