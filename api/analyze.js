@@ -1,4 +1,4 @@
-import { buildPrompt } from './lib/buildPrompt.js';
+import { buildPrompt } from './_lib/buildPrompt.js';
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {

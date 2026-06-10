@@ -3,9 +3,9 @@
 // submits them as an Anthropic Batch, then stores the batch ID + stock snapshot
 // in Upstash Redis (TTL 6h) for the send job to retrieve at 7 AM UTC.
 
-import { buildPrompt } from '../lib/buildPrompt.js';
-import { fetchFmpFundamentals } from '../lib/fetchFmp.js';
-import { fetchMsciSmallCapPool } from '../lib/fetchFtsePool.js';
+import { buildPrompt } from '../_lib/buildPrompt.js';
+import { fetchFmpFundamentals } from '../_lib/fetchFmp.js';
+import { fetchMsciSmallCapPool } from '../_lib/fetchFtsePool.js';
 
 export const config = { maxDuration: 60 };
 

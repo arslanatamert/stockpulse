@@ -2,9 +2,9 @@
 // Retrieves Anthropic Batch results, scores + ranks stocks, sends HTML email
 // via Resend and a WhatsApp summary via Twilio.
 
-import { scoreStock }         from '../lib/scoreStock.js';
-import { buildEmailHtml, buildEmailText } from '../lib/emailTemplate.js';
-import { buildWhatsAppText }  from '../lib/whatsappTemplate.js';
+import { scoreStock }         from '../_lib/scoreStock.js';
+import { buildEmailHtml, buildEmailText } from '../_lib/emailTemplate.js';
+import { buildWhatsAppText }  from '../_lib/whatsappTemplate.js';
 
 export const config = { maxDuration: 60 };
 
